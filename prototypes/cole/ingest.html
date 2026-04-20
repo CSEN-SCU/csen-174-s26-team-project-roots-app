@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ingest — Roots</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="wrap nav">
+        <a class="mark" href="index.html">Roots</a>
+        <nav aria-label="Site">
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="ingest.html" aria-current="page">Ingest</a></li>
+            <li><a href="planner.html">Planner</a></li>
+            <li><a href="collaborate.html">Clusters</a></li>
+            <li><a href="onboard.html">Onboard</a></li>
+            <li><a href="momentum.html">Momentum</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-main wrap" id="main">
+      <header class="page-hero">
+        <span class="eyebrow">Intelligent content ingestors</span>
+        <h1>The bridge between TikTok, Reels, and reality.</h1>
+        <p class="lede">
+          Share-to-Action capture, multimodal metadata extraction, and auto-location when creators never
+          tag the pin—so saves become structured input for the planner, not another graveyard.
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="onboard.html">Test import a link</a>
+          <a class="btn btn-ghost" href="planner.html">See planner output</a>
+        </div>
+      </header>
+
+      <div class="stack-lg">
+        <section aria-labelledby="ext-heading">
+          <div class="section-head" style="margin-top: 0">
+            <h2 id="ext-heading">Share-to-Action extension</h2>
+            <p>
+              Browser or mobile extension: from any Reel, TikTok, or YouTube Short, send the URL straight
+              into Roots—no copy-paste gymnastics, no losing the tab in thirty other saves.
+            </p>
+          </div>
+          <div class="browser-mock">
+            <div class="browser-mock-top">
+              <span class="browser-dot"></span><span class="browser-dot"></span><span class="browser-dot"></span>
+              <div class="browser-url">instagram.com/reel/…</div>
+            </div>
+            <div class="browser-mock-body">
+              <div class="ext-popup">
+                <strong style="color: var(--accent-deep)">Roots</strong>
+                <p class="subtle" style="margin: 0.5rem 0 0">Send this clip to your workspace</p>
+                <button type="button" class="btn btn-primary">Send to Roots</button>
+                <p class="subtle" style="margin-top: 0.75rem; margin-bottom: 0; font-size: 0.78rem">
+                  Extension UI mock — wires to ingest pipeline below.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="mm-heading">
+          <div class="section-head" style="margin-top: 0">
+            <h2 id="mm-heading">Multimodal metadata extraction</h2>
+            <p>
+              An AI engine scans <strong style="color: var(--ink)">audio</strong> (speech-to-text),
+              <strong style="color: var(--ink)">visual landmarks</strong> (computer vision), and
+              <strong style="color: var(--ink)">captions</strong> together—so Roots understands what you
+              are looking at even when any single channel is thin or wrong.
+            </p>
+          </div>
+          <div class="card">
+            <p class="subtle" style="margin-top: 0">Ingest pipeline (conceptual)</p>
+            <div class="pipeline">
+              <div class="pipeline-node"><strong>Video</strong>Frames &amp; on-screen text</div>
+              <span class="pipeline-arrow" aria-hidden="true">→</span>
+              <div class="pipeline-node"><strong>Audio</strong>ASR transcript</div>
+              <span class="pipeline-arrow" aria-hidden="true">→</span>
+              <div class="pipeline-node"><strong>Captions</strong>Hashtags &amp; mentions</div>
+              <span class="pipeline-arrow" aria-hidden="true">→</span>
+              <div class="pipeline-node"><strong>Fusion</strong>Entities, steps, intent</div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="loc-heading">
+          <div class="section-head" style="margin-top: 0">
+            <h2 id="loc-heading">Auto-location tagging</h2>
+            <p>
+              When a creator skips the location sticker, Roots still proposes coordinates from visual cues—a
+              distinctive storefront, skyline silhouette, trailhead signage—and ranks the most likely
+              real-world place for you to confirm in one tap.
+            </p>
+          </div>
+          <div class="feature-grid cols-2">
+            <div class="card">
+              <h3 style="font-family: Fraunces, Georgia, serif; margin: 0 0 0.5rem; font-size: 1.05rem">
+                Vision match
+              </h3>
+              <p class="subtle" style="margin: 0">
+                Landmark embeddings matched against map POI and street-level imagery where licensed.
+              </p>
+            </div>
+            <div class="loc-card">
+              <strong style="color: var(--accent-deep)">Suggested pin</strong>
+              <p style="margin: 0.35rem 0 0.25rem; color: var(--ink); font-size: 0.92rem">
+                Mountain range + trail marker in frame → <em>Likely:</em> Mission Peak staging area
+              </p>
+              <span class="coord">37.5129° N, 121.8801° W · conf. 0.81</span>
+              <div class="cta-row" style="margin-top: 0.85rem">
+                <button type="button" class="btn btn-primary btn-small">Accept pin</button>
+                <button type="button" class="btn btn-ghost btn-small">Adjust</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          <strong style="color: var(--ink)">Prototype</strong> —
+          <a href="index.html">Home</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

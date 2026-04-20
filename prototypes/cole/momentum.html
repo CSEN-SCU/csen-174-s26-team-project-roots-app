@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Momentum — Roots</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="wrap nav">
+        <a class="mark" href="index.html">Roots</a>
+        <nav aria-label="Site">
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="ingest.html">Ingest</a></li>
+            <li><a href="planner.html">Planner</a></li>
+            <li><a href="collaborate.html">Clusters</a></li>
+            <li><a href="onboard.html">Onboard</a></li>
+            <li><a href="momentum.html" aria-current="page">Momentum</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-main wrap" id="main">
+      <header class="page-hero">
+        <span class="eyebrow">Notification engine + Reality Score</span>
+        <h1>Proactive nudges so Roots never becomes another idea graveyard.</h1>
+        <p class="lede">
+          Location-aware and calendar-gap triggers suggest the smallest next action. Every saved item gets
+          a <strong style="color: var(--ink)">Reality Score</strong>—a percentage for how “real-world ready”
+          it is once location, hours, and routing checks land.
+        </p>
+      </header>
+
+      <section aria-labelledby="nudge-heading">
+        <div class="section-head" style="margin-top: 0">
+          <h2 id="nudge-heading">Nudge engine (examples)</h2>
+          <p>
+            Push notifications and in-app toasts when you are near a saved stop, when a cluster mate
+            completes a dependency you were waiting on, or when the calendar shows a solvable gap.
+          </p>
+        </div>
+        <div class="nudge-list">
+          <div class="nudge">
+            <div class="nudge-icon" aria-hidden="true">📍</div>
+            <div>
+              <strong style="color: var(--ink)">Geo nudge</strong>
+              <p class="subtle" style="margin: 0.25rem 0 0">
+                “You are 12 minutes from the lumber yard on your cabinet root—pickup window closes in 45
+                minutes.”
+              </p>
+            </div>
+          </div>
+          <div class="nudge">
+            <div class="nudge-icon" aria-hidden="true">🗓</div>
+            <div>
+              <strong style="color: var(--ink)">Calendar gap</strong>
+              <p class="subtle" style="margin: 0.25rem 0 0">
+                “Saturday 10am–12pm still open—slot ‘rip panels’ from your DIY checklist?”
+              </p>
+            </div>
+          </div>
+          <div class="nudge">
+            <div class="nudge-icon" aria-hidden="true">👥</div>
+            <div>
+              <strong style="color: var(--ink)">Cluster unblock</strong>
+              <p class="subtle" style="margin: 0.25rem 0 0">
+                “Leo booked dinner—your Tokyo root is conflict-free. Confirm tempura bar?”
+              </p>
+            </div>
+          </div>
+        </div>
+        <p class="subtle" style="margin-top: 1rem">
+          Technical hook: background jobs read device location (with consent), calendar write scope, and
+          push tokens—sketched only in this HTML prototype.
+        </p>
+      </section>
+
+      <section aria-labelledby="score-heading" style="margin-top: 2.5rem">
+        <div class="section-head" style="margin-top: 0">
+          <h2 id="score-heading">Reality Score</h2>
+          <p>
+            Differentiates Roots from a notes app: each save surfaces a score built from confirmed
+            location, verified hours, transit fit, checklist progress, and group commitments.
+          </p>
+        </div>
+        <div class="score-grid">
+          <div class="score-card">
+            <div class="score-ring" style="--p: 92%">
+              <span>92%</span>
+            </div>
+            <h3>Shibuya evening</h3>
+            <p>Pin + hours + JR leg validated · ticket pending</p>
+          </div>
+          <div class="score-card">
+            <div class="score-ring" style="--p: 48%">
+              <span>48%</span>
+            </div>
+            <h3>DIY cabinet</h3>
+            <p>Tool list extracted · cut list not confirmed · no store run scheduled</p>
+          </div>
+          <div class="score-card">
+            <div class="score-ring" style="--p: 9%">
+              <span>9%</span>
+            </div>
+            <h3>Random reel</h3>
+            <p>Fresh save · no ingest run · Reality Score gamifies the next tap</p>
+          </div>
+        </div>
+        <div class="callout" role="note" style="margin-top: 1.5rem">
+          <p>
+            If location, hours, and route checks all pass, the score approaches the high nineties—making
+            “almost real” visible at a glance and nudging users toward the last mile (book, buy, go).
+          </p>
+          <cite>Visionary edge vs static saves</cite>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          <strong style="color: var(--ink)">Prototype</strong> —
+          <a href="index.html">Home</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

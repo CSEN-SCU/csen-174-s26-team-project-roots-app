@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clusters — Roots</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="wrap nav">
+        <a class="mark" href="index.html">Roots</a>
+        <nav aria-label="Site">
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="ingest.html">Ingest</a></li>
+            <li><a href="planner.html">Planner</a></li>
+            <li><a href="collaborate.html" aria-current="page">Clusters</a></li>
+            <li><a href="onboard.html">Onboard</a></li>
+            <li><a href="momentum.html">Momentum</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-main wrap" id="main">
+      <header class="page-hero">
+        <span class="eyebrow">Collaborative social clusters</span>
+        <h1>Shared “Roots” for crews who plan together—not parallel doom-saves.</h1>
+        <p class="lede">
+          Multi-user workspaces for trips and projects, AI-assisted conflict resolution when three friends
+          save different restaurants for the same night, and actionable feeds that show what people are
+          doing—not only what they liked.
+        </p>
+      </header>
+
+      <section aria-labelledby="shared-heading">
+        <div class="section-head" style="margin-top: 0">
+          <h2 id="shared-heading">Shared Roots workspace</h2>
+          <p>
+            Everyone drops Reels and Shorts into the same collective folder; ingest runs once per item
+            and updates the shared roadmap and map layer the whole group sees.
+          </p>
+        </div>
+        <div class="cluster-board">
+          <div class="card">
+            <h3 style="font-family: Fraunces, Georgia, serif; margin: 0 0 0.5rem; font-size: 1.1rem">
+              Spring Tokyo crew
+            </h3>
+            <p class="subtle" style="margin: 0 0 1rem">3 members · trip root</p>
+            <div class="drop-zone">Drop saved URLs here · extension sends directly</div>
+            <p class="subtle" style="margin-top: 0.75rem; margin-bottom: 0">
+              Permissions: editors can reorder; viewers get nudges only.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="conflict-heading" style="margin-top: 2.5rem">
+        <div class="section-head" style="margin-top: 0">
+          <h2 id="conflict-heading">Conflict resolution</h2>
+          <p>
+            When friends surface competing pins for the same slot, Roots proposes the most efficient route
+            or the reservation with better availability—using group location context and live data.
+          </p>
+        </div>
+        <div class="card conflict-card">
+          <h3 style="font-family: Fraunces, Georgia, serif; margin: 0 0 0.5rem; font-size: 1.05rem">
+            Saturday dinner · three saves
+          </h3>
+          <ul class="subtle" style="margin: 0 0 0.75rem; padding-left: 1.2rem">
+            <li>Maya → sushi omakase (Roppongi)</li>
+            <li>Leo → yakiniku (Shinjuku)</li>
+            <li>You → tempura bar (Ginza)</li>
+          </ul>
+          <p style="margin: 0; color: var(--ink); font-size: 0.92rem">
+            <strong>AI suggestion:</strong> Book tempura bar 19:30 — shortest combined transit from group
+            hotel and only slot with 3 seats. Alternate: yakiniku 20:15 (+12 min walk).
+          </p>
+          <div class="cta-row" style="margin-top: 1rem">
+            <button type="button" class="btn btn-primary btn-small">Apply suggestion</button>
+            <button type="button" class="btn btn-ghost btn-small">Vote instead</button>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="feed-heading" style="margin-top: 2.5rem">
+        <div class="section-head" style="margin-top: 0">
+          <h2 id="feed-heading">Actionable feed</h2>
+          <p>
+            Replace vanity metrics with execution: see friends who booked legs, bought materials, or closed
+            a checklist step—designed to normalize doing over scrolling.
+          </p>
+        </div>
+        <div class="feed-list">
+          <div class="feed-item">
+            <span class="avatar" aria-hidden="true">M</span>
+            <div>
+              <span class="pill-doing">Doing</span>
+              <p style="margin: 0.35rem 0 0; font-size: 0.9rem; color: var(--ink)">
+                Maya confirmed JR pass pickup · linked to your shared Tokyo root
+              </p>
+            </div>
+          </div>
+          <div class="feed-item">
+            <span class="avatar" aria-hidden="true">L</span>
+            <div>
+              <span class="pill-doing">Doing</span>
+              <p style="margin: 0.35rem 0 0; font-size: 0.9rem; color: var(--ink)">
+                Leo checked off “buy plywood” on the cabinet cluster
+              </p>
+            </div>
+          </div>
+          <div class="feed-item">
+            <span class="avatar" aria-hidden="true">Y</span>
+            <div>
+              <span class="pill-doing" style="background: var(--ink-muted)">Watching</span>
+              <p style="margin: 0.35rem 0 0; font-size: 0.9rem; color: var(--ink-muted)">
+                You saved a new reel · Reality Score 12% — tap to promote to plan
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          <strong style="color: var(--ink)">Prototype</strong> —
+          <a href="index.html">Home</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

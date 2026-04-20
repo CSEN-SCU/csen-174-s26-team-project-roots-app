@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Onboard — Roots</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="wrap nav">
+        <a class="mark" href="index.html">Roots</a>
+        <nav aria-label="Site">
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="ingest.html">Ingest</a></li>
+            <li><a href="planner.html">Planner</a></li>
+            <li><a href="collaborate.html">Clusters</a></li>
+            <li><a href="onboard.html" aria-current="page">Onboard</a></li>
+            <li><a href="momentum.html">Momentum</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-main wrap" id="main">
+      <header class="page-hero">
+        <span class="eyebrow">Onboarding</span>
+        <h1>Connect social accounts, then prove value in one paste.</h1>
+        <p class="lede">
+          Roadmap: OAuth with social APIs for seamless saves, plus a <strong style="color: var(--ink)">Test
+          Import</strong> tool—paste any Short or Reel URL and watch a simulated multimodal extraction for
+          instant gratification (prototype below is static + local only).
+        </p>
+      </header>
+
+      <section aria-labelledby="steps-heading">
+        <div class="section-head" style="margin-top: 0">
+          <span class="eyebrow">Setup path</span>
+          <h2 id="steps-heading">Connect accounts, extend the browser, prove value</h2>
+        </div>
+        <ol class="steps">
+          <li>
+            <div>
+              <strong style="color: var(--ink)">Link accounts</strong>
+              <p class="subtle" style="margin: 0.35rem 0 0">
+                Instagram / TikTok / YouTube OAuth scopes for read-only saves and watch history (product
+                policy TBD). Mock “Connect” buttons ship in production build.
+              </p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong style="color: var(--ink)">Install Share-to-Action</strong>
+              <p class="subtle" style="margin: 0.35rem 0 0">
+                Browser or mobile extension so URLs never die in the clipboard—jump to
+                <a href="ingest.html">Ingest</a> for the UX story.
+              </p>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong style="color: var(--ink)">Run a test import</strong>
+              <p class="subtle" style="margin: 0.35rem 0 0">
+                Paste a link below. No network call—this page fakes the AI pass so stakeholders feel the
+                loop before backend exists.
+              </p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="import-box">
+          <label for="paste-url">Paste a Reel, TikTok, or YouTube Short URL</label>
+          <div class="import-row">
+            <input
+              id="paste-url"
+              type="url"
+              inputmode="url"
+              placeholder="https://…"
+              autocomplete="off"
+            />
+            <button type="button" class="btn btn-primary" id="run-import">Run test import</button>
+          </div>
+          <div class="extract-result" id="extract-result" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section aria-labelledby="first-step-heading" style="margin-top: 3rem">
+        <div class="section-head" style="margin-top: 0">
+          <span class="eyebrow">Product question</span>
+          <h2 id="first-step-heading">What should Roots optimize first?</h2>
+          <p>
+            Travel and multi-stop routes hit the “link between ideas” vision hard; DIY and projects lean
+            into measurements and tool lists. Both are in scope—this is a prioritization conversation for
+            the team.
+          </p>
+        </div>
+        <div class="choice-grid">
+          <div class="choice-option" tabindex="0">
+            <h3>Travel &amp; routes first</h3>
+            <p>
+              Double down on map + calendar, transit, opening hours, and group clusters for trips. Fastest
+              wow when saves are place-heavy reels.
+            </p>
+          </div>
+          <div class="choice-option" tabindex="0">
+            <h3>DIY &amp; projects first</h3>
+            <p>
+              Lead with roadmaps, tool lists, and cut sequences from how-to Shorts. Strong “Reality Score”
+              story when steps are discrete.
+            </p>
+          </div>
+        </div>
+        <p class="choice-note">
+          This prototype does not record your choice—bring the debate to your next roadmap review. See
+          <a href="planner.html">Planner</a> for parallel UI tracks.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          <strong style="color: var(--ink)">Prototype</strong> —
+          <a href="index.html">Home</a>
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        var btn = document.getElementById("run-import");
+        var input = document.getElementById("paste-url");
+        var out = document.getElementById("extract-result");
+        if (!btn || !input || !out) return;
+
+        btn.addEventListener("click", function () {
+          var url = (input.value || "").trim();
+          out.classList.add("visible");
+          if (!url) {
+            out.innerHTML =
+              "<p class=\"subtle\" style=\"margin:0\">Paste any URL above, then run again to see a simulated extraction.</p>";
+            return;
+          }
+
+          var host = "generic clip";
+          try {
+            var u = new URL(url);
+            if (/tiktok/i.test(u.hostname)) host = "TikTok";
+            else if (/instagram|instagr/i.test(u.hostname)) host = "Instagram";
+            else if (/youtu\.?be/i.test(u.hostname)) host = "YouTube";
+          } catch (e) {
+            host = "unparsed URL";
+          }
+
+          out.innerHTML =
+            "<p style=\"margin:0 0 0.75rem;font-weight:600;color:var(--accent-deep)\">Simulated multimodal pass · " +
+            host +
+            "</p>" +
+            "<dl>" +
+            "<dt>Speech → text</dt><dd>“…third stop Shibuya Sky, try to book after four…”</dd>" +
+            "<dt>Vision cues</dt><dd>Skyline deck + “SHIBUYA SKY” signage → place hypothesis</dd>" +
+            "<dt>Caption entities</dt><dd>#shibuya #tokyo · no pinned coordinates</dd>" +
+            "<dt>Auto-location</dt><dd>Suggested pin: Shibuya Sky · 35.6580, 139.7016 · conf. 0.84</dd>" +
+            "<dt>Roadmap seed</dt><dd>3 checklist steps + Saturday PM calendar hold</dd>" +
+            "<dt>Reality score (seed)</dt><dd>62% — hours matched; transit not yet confirmed</dd>" +
+            "</dl>" +
+            "<p class=\"subtle\" style=\"margin:0.75rem 0 0\">No data leaves this browser. Wire to real APIs in implementation.</p>";
+        });
+      })();
+    </script>
+  </body>
+</html>

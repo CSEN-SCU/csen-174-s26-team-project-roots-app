@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Planner — Roots</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <div class="wrap nav">
+        <a class="mark" href="index.html">Roots</a>
+        <nav aria-label="Site">
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="ingest.html">Ingest</a></li>
+            <li><a href="planner.html" aria-current="page">Planner</a></li>
+            <li><a href="collaborate.html">Clusters</a></li>
+            <li><a href="onboard.html">Onboard</a></li>
+            <li><a href="momentum.html">Momentum</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page-main wrap" id="main">
+      <header class="page-hero">
+        <span class="eyebrow">Context-aware route &amp; project planner</span>
+        <h1>Beyond the static archive: roadmaps, logistics, and a map that shows the root.</h1>
+        <p class="lede">
+          Dynamic roadmaps from video content, logistic auto-fill against live hours and transit, and an
+          Inaction Dashboard that contrasts ideas in motion with dead saves—implemented here as UI mocks
+          for a hybrid <strong style="color: var(--ink)">calendar + Mapbox / Google Maps</strong> shell.
+        </p>
+      </header>
+
+      <section aria-labelledby="planner-ui-heading">
+        <div class="section-head" style="margin-top: 0">
+          <h2 id="planner-ui-heading">Planner UI — calendar beside map</h2>
+          <p>
+            Visualize the “root” between stops: extracted clips become dated blocks while the map shows
+            pins and a feasibility-aware route sketch.
+          </p>
+        </div>
+        <div class="planner-ui">
+          <div class="calendar-mock">
+            <div class="calendar-mock-header">
+              <span>April 2026</span>
+              <span class="subtle">Week view</span>
+            </div>
+            <div class="cal-grid" role="presentation">
+              <div class="cal-dow">M</div>
+              <div class="cal-dow">T</div>
+              <div class="cal-dow">W</div>
+              <div class="cal-dow">T</div>
+              <div class="cal-dow">F</div>
+              <div class="cal-dow">S</div>
+              <div class="cal-dow">S</div>
+              <div class="cal-cell">14</div>
+              <div class="cal-cell has-event" title="Shibuya block">15</div>
+              <div class="cal-cell">16</div>
+              <div class="cal-cell has-event">17</div>
+              <div class="cal-cell">18</div>
+              <div class="cal-cell">19</div>
+              <div class="cal-cell">20</div>
+            </div>
+            <p class="subtle" style="padding: 0.65rem 1rem; margin: 0; border-top: 1px solid var(--line)">
+              Events auto-filled from ingest: “Shibuya Sky · after 4pm per audio cue.”
+            </p>
+          </div>
+          <div class="map-mock" aria-label="Map preview placeholder">
+            <div class="map-route" aria-hidden="true"></div>
+            <div class="map-pin pin-a" aria-hidden="true"></div>
+            <div class="map-pin pin-b" aria-hidden="true"></div>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="roadmap-heading" style="margin-top: 2.5rem">
+        <div class="section-head" style="margin-top: 0">
+          <h2 id="roadmap-heading">Dynamic roadmaps (two example tracks)</h2>
+          <p>
+            For a DIY cabinet reel, Roots extracts tools and measurements; for a weekend city reel, it
+            builds a logical day-by-day itinerary with dependencies.
+          </p>
+        </div>
+        <div class="feature-grid cols-2">
+          <div class="card">
+            <h3 style="font-family: Fraunces, Georgia, serif; margin: 0 0 0.75rem; font-size: 1.1rem">
+              DIY · Cabinet build
+            </h3>
+            <ul class="roadmap">
+              <li>
+                <input type="checkbox" checked disabled aria-label="done" />
+                <div>
+                  <span class="roadmeta">Tools</span>
+                  Track saw, pocket hole jig, clamps (from audio + overlay list)
+                  <div class="logistics-row">
+                    <span class="chip">Buy: 90 min</span>
+                    <span class="chip-muted">Home Depot · open until 9pm</span>
+                  </div>
+                </div>
+              </li>
+              <li>
+                <input type="checkbox" disabled aria-label="pending" />
+                <div>
+                  <span class="roadmeta">Cut list</span>
+                  Rip 3× 24″ side panels per on-screen diagram
+                  <div class="logistics-row">
+                    <span class="chip">First step</span>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3 style="font-family: Fraunces, Georgia, serif; margin: 0 0 0.75rem; font-size: 1.1rem">
+              Travel · Weekend in Tokyo
+            </h3>
+            <ul class="roadmap">
+              <li>
+                <input type="checkbox" checked disabled aria-label="done" />
+                <div>
+                  <span class="roadmeta">Day 1 · PM</span>
+                  Shibuya Sky — book after 16:00 (speech-to-text)
+                  <div class="logistics-row">
+                    <span class="chip">Transit 22m</span>
+                    <span class="chip">Open 10–22:30</span>
+                  </div>
+                </div>
+              </li>
+              <li>
+                <input type="checkbox" disabled aria-label="pending" />
+                <div>
+                  <span class="roadmeta">Day 2</span>
+                  Tsukiji outer market breakfast → Ginza walk (ordered by distance)
+                  <div class="logistics-row">
+                    <span class="chip-muted">Feasibility check: OK</span>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="dash-heading" style="margin-top: 2.5rem">
+        <div class="section-head" style="margin-top: 0">
+          <h2 id="dash-heading">The Inaction Dashboard</h2>
+          <p>
+            A visual split between ideas in progress and dead saves, with one-tap first steps—book a
+            ticket, buy a material, text the group thread.
+          </p>
+        </div>
+        <div class="dashboard">
+          <div class="dash-card">
+            <h3>Ideas in progress</h3>
+            <div class="dash-stat">4 <span>active roots</span></div>
+            <div class="meter" aria-hidden="true"><span style="width: 68%"></span></div>
+            <p class="subtle" style="margin-top: 0.75rem; margin-bottom: 0">
+              Next nudge: “You have a 2-hour gap Saturday—slot the cabinet cut list?”
+            </p>
+          </div>
+          <div class="dash-card">
+            <h3>Dead saves</h3>
+            <div class="dash-stat dead-save">12 <span>untouched 30+ days</span></div>
+            <div class="meter" aria-hidden="true"><span style="width: 22%"></span></div>
+            <p class="subtle" style="margin-top: 0.75rem; margin-bottom: 0">
+              Stacked by oldest first. One tap runs ingest + proposes a 5-minute micro-step.
+            </p>
+          </div>
+        </div>
+        <p class="subtle" style="margin-top: 1rem">
+          Pair with <a href="momentum.html">Momentum</a> for proactive nudges and Reality Scores.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <p>
+          <strong style="color: var(--ink)">Prototype</strong> —
+          <a href="index.html">Home</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
