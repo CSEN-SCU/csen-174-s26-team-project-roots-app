@@ -5,3 +5,9 @@ out/
 *.log
 .env*.local
 next-env.d.ts
+# Environment files with secrets (API keys, tokens). This repo is public —
+# never commit real values. Use .env.example for variable names only.
+.env
+**/.env
+.env.*
+!.env.example
