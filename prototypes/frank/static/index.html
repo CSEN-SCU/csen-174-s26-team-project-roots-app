@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Roots — Reel Itinerary Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;700&family=Sora:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">◇</span>
+        <div>
+          <div class="brand-title">Roots</div>
+          <div class="brand-sub">Reel → itinerary prototype</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <button type="button" class="nav-btn is-active" data-view="intro">Intro</button>
+        <button type="button" class="nav-btn" data-view="planner">Planner</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="view-intro" class="view is-visible">
+        <div class="hero">
+          <p class="eyebrow">Frank · divergent prototype</p>
+          <h1>From saved reels to a <span class="accent">rough-cut trip plan</span></h1>
+          <p class="lede">
+            This explorer tests the “POWERED BY” idea in our product vision: multimodal-ish signals
+            (starting with captions from your saved travel reels) become named places, then a
+            calendar-aware draft itinerary with crude travel-time spacing.
+          </p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card">
+            <h2>Who it is for</h2>
+            <p>
+              People who collect travel inspiration on Instagram but stall when translating saves
+              into a workable schedule—especially when clips mention venues obliquely or without
+              location tags.
+            </p>
+          </article>
+          <article class="card">
+            <h2>What problem it tackles</h2>
+            <p>
+              “Doom-saving” creates a pile of context-poor media. This flow pulls candidate spots
+              out of reel text, keeps only what geocodes near your destination, and schedules visits
+              with simple hours + travel buffers.
+            </p>
+          </article>
+          <article class="card">
+            <h2>How to use it (gallery walk)</h2>
+            <ol class="steps">
+              <li>Switch to <strong>Planner</strong>.</li>
+              <li>Enter destination + trip dates, create trip.</li>
+              <li>
+                Load reels: <strong>Demo Lisbon set</strong>, paste an Instagram access token, or
+                import JSON captions.
+              </li>
+              <li>Run <strong>Extract places (AI)</strong>, then <strong>Build itinerary</strong>.</li>
+            </ol>
+          </article>
+          <article class="card callout">
+            <h2>Instagram reality check</h2>
+            <p>
+              Meta does not expose your private <em>Saved</em> folder to third-party APIs. This
+              prototype can pull <strong>recent media</strong> with an Instagram Graph token
+              (developer setup), or you can <strong>import captions manually</strong>—closest to a
+              “saved reels” folder for a class demo.
+            </p>
+            <p class="fine">
+              Never paste passwords here. Use a short-lived access token from the Meta developer
+              flow, or stay in demo/import mode.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-planner" class="view">
+        <div class="panel">
+          <h2 class="panel-title">1 · Trip anchor</h2>
+          <div class="form-row">
+            <label>
+              Destination
+              <input type="text" id="destination" placeholder="Lisbon, Portugal" autocomplete="off" />
+            </label>
+            <label>
+              Start date
+              <input type="date" id="start-date" />
+            </label>
+            <label>
+              End date
+              <input type="date" id="end-date" />
+            </label>
+          </div>
+          <div class="actions">
+            <button type="button" id="btn-create-trip" class="primary">Create trip</button>
+            <span id="trip-status" class="status"></span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title">2 · Reels source</h2>
+          <div class="form-row">
+            <label class="grow">
+              Instagram access token <span class="hint">(optional — recent media, not Saved folder)</span>
+              <input type="password" id="ig-token" placeholder="IGQ..." autocomplete="off" />
+            </label>
+          </div>
+          <div class="actions wrap">
+            <button type="button" id="btn-sync-ig" class="secondary" disabled>Sync Instagram</button>
+            <button type="button" id="btn-demo" class="secondary" disabled>Load demo reels</button>
+          </div>
+          <label>
+            Or import JSON (array of <code>{ caption, permalink? }</code>)
+            <textarea id="import-json" rows="4" placeholder='[{"caption":"..."}]'></textarea>
+          </label>
+          <div class="actions">
+            <button type="button" id="btn-import" class="secondary" disabled>Import JSON</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 class="panel-title">3 · AI & schedule</h2>
+          <p class="muted">
+            Extraction uses OpenAI (see <code>.env</code>). Geocoding uses OpenStreetMap Nominatim.
+            Itinerary uses naive travel-time estimates—good enough to test the concept, not routing.
+          </p>
+          <div class="actions wrap">
+            <button type="button" id="btn-extract" class="primary" disabled>Extract places (AI)</button>
+            <button type="button" id="btn-itinerary" class="primary" disabled>Build itinerary</button>
+          </div>
+          <p id="flow-status" class="status"></p>
+        </div>
+
+        <div class="panel results">
+          <h2 class="panel-title">Results</h2>
+          <div class="split">
+            <div>
+              <h3>Places kept near destination</h3>
+              <ul id="place-list" class="list"></ul>
+            </div>
+            <div>
+              <h3>Itinerary draft</h3>
+              <div id="itinerary-out" class="itinerary"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>Roots course prototype · aligns with <code>docs/product-vision.md</code></span>
+    </footer>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
