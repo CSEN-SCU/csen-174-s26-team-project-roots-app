@@ -4,14 +4,25 @@ Divergent prototype for **Roots**: turn Instagram reel captions (plus optional v
 
 ## Run locally
 
-```bash
+From `prototypes/frank`, create a venv and install deps **with the same Python you will use to run the app** (avoid a different `python` on your PATH, e.g. MSYS MinGW, which often has no `pip` and no installed packages).
+
+**PowerShell (recommended on Windows):**
+
+```powershell
 cd prototypes/frank
-python -m venv .venv
-.venv\Scripts\activate
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
 # Add OPENAI_API_KEY to .env
 python -m app.main
+```
+
+If your venv was created by another tool and has `bin` instead of `Scripts`:
+
+```powershell
+.\.venv\bin\python.exe -m pip install -r requirements.txt
+.\.venv\bin\python.exe -m app.main
 ```
 
 Open `http://127.0.0.1:8787/` (port from `PORT` in `.env`, default 8787).
