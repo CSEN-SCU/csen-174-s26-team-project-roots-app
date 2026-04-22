@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRoots } from "@/lib/store";
-import { mockReels } from "@/lib/mockData";
-import type { ExtractionStage, Reel, SourcePlatform } from "@/lib/types";
+import type { ExtractionStage } from "@/lib/types";
 
 const STAGES: { key: ExtractionStage; label: string; emoji: string }[] = [
   { key: "fetching", label: "Fetching media", emoji: "🔗" },
@@ -13,49 +12,58 @@ const STAGES: { key: ExtractionStage; label: string; emoji: string }[] = [
   { key: "weather", label: "Checking weather", emoji: "🌤" },
 ];
 
-function detectPlatform(url: string): SourcePlatform {
-  if (/tiktok/i.test(url)) return "tiktok";
-  if (/youtube|youtu\.be/i.test(url)) return "youtube";
-  if (/instagram/i.test(url)) return "instagram";
-  return "instagram";
-}
-
 export function InspirationInput() {
   const { reels, addReel, selectReel, selectedReelId } = useRoots();
   const [url, setUrl] = useState("");
   const [stage, setStage] = useState<ExtractionStage>("idle");
   const [activeStageIdx, setActiveStageIdx] = useState(-1);
+  const [extractError, setExtractError] = useState<string | null>(null);
 
   async function handleExtract() {
-    if (!url.trim() && stage === "idle") {
-      // demo with no URL: pre-fill
-      setUrl("https://instagram.com/reel/demo-extraction");
-    }
+    const extractUrl = url.trim() || "https://instagram.com/reel/demo-extraction";
+    if (!url.trim()) setUrl(extractUrl);
+    setExtractError(null);
     setStage("fetching");
-    for (let i = 0; i < STAGES.length; i++) {
-      setActiveStageIdx(i);
-      setStage(STAGES[i].key);
-      await new Promise((r) => setTimeout(r, 700));
-    }
-    setStage("done");
+    setActiveStageIdx(0);
 
-    // Pick a fresh reel from the bank that isn't already in the list, else clone Uvas.
-    const template =
-      mockReels.find((m) => !reels.some((r) => r.id === m.id)) ?? mockReels[0];
-    const cloned: Reel = {
-      ...template,
-      id: `reel-${Date.now()}`,
-      url: url || template.url,
-      platform: detectPlatform(url || template.url),
-      createdAt: new Date().toISOString(),
-    };
-    addReel(cloned);
+    // Auto-advance visual stages every 2.5s while real API call is in-flight
+    let stageIdx = 0;
+    const timer = setInterval(() => {
+      stageIdx = Math.min(stageIdx + 1, STAGES.length - 1);
+      setActiveStageIdx(stageIdx);
+      setStage(STAGES[stageIdx].key);
+    }, 2500);
 
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: extractUrl }),
+      });
+
+      clearInterval(timer);
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? `Server error ${res.status}`);
+      }
+
+      const { reel } = await res.json();
+      setStage("done");
+      setActiveStageIdx(STAGES.length);
+      addReel(reel);
+
+      setTimeout(() => {
+        setStage("idle");
+        setActiveStageIdx(-1);
+        setUrl("");
+      }, 1500);
+    } catch (err: unknown) {
+      clearInterval(timer);
       setStage("idle");
       setActiveStageIdx(-1);
-      setUrl("");
-    }, 1200);
+      setExtractError(err instanceof Error ? err.message : "Extraction failed");
+    }
   }
 
   const isProcessing = stage !== "idle" && stage !== "done";
@@ -119,6 +127,13 @@ export function InspirationInput() {
           )}
         </button>
       </div>
+
+      {/* Error display */}
+      {extractError && (
+        <p className="mt-2 text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">
+          ⚠️ {extractError}
+        </p>
+      )}
 
       {/* Quick demo sources */}
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
