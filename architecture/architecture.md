@@ -1,3 +1,4 @@
+```mermaid
 ---
 config:
   layout: elk
@@ -15,8 +16,9 @@ flowchart TB
     classDef indigo stroke:#818cf8,fill:#eef2ff
     classDef teal stroke:#2dd4bf,fill:#f0fdfa
     classDef violet stroke:#a78bfa,fill:#f5f3ff
+```
 
-
+```mermaid
 ---
 config:
   layout: elk
@@ -41,3 +43,4 @@ flowchart TB
     classDef appNode stroke:#38bdf8,fill:#f0f9ff,color:#1e1b4b
     classDef dbNode stroke:#a3e635,fill:#f7fee7,color:#1e1b4b
     classDef apiNode stroke:#a78bfa,fill:#f5f3ff,color:#1e1b4b
+```
