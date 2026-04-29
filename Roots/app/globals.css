@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap");
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background:
+    radial-gradient(1200px 600px at 90% -10%, rgba(143, 188, 133, 0.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(217, 180, 126, 0.18), transparent 60%),
+    #FBF8F2;
+  color: #0E1411;
+  font-family: "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(143, 188, 133, 0.08) 0%,
+    rgba(143, 188, 133, 0.25) 50%,
+    rgba(143, 188, 133, 0.08) 100%
+  );
+  background-size: 800px 100%;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(15, 35, 16, 0.06);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+
+/* Leaflet attribution dim */
+.leaflet-container {
+  font-family: "Inter", sans-serif;
+  border-radius: 1rem;
+}
+.leaflet-control-attribution {
+  font-size: 10px !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+}
