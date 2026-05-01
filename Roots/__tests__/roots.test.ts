@@ -8,6 +8,9 @@
  * Test 3 ❌  User can log in  (DESIGNED TO FAIL — auth not yet implemented)
  * Test 4 ✅  Back end turns AI JSON into the correct Reel shape
  * Test 5 ✅  AI output contains all required JSON fields
+ * Test 6 ✅  assembleReel applies safe defaults when nested fields are missing
+ * Test 7 ✅  validateAIResponse rejects invalid thumbnailHue values
+ * Test 8 ✅  validateAIResponse rejects invalid roadmap.kind values
  */
 
 import type { Reel } from "@/lib/types";
@@ -398,5 +401,93 @@ describe("Test 5: AI output contains all required JSON fields", () => {
     expect(errors.some((e) => e.includes("thumbnailHue"))).toBe(true);
     expect(errors.some((e) => e.includes("extracted.locationGuess"))).toBe(true);
     expect(errors.some((e) => e.includes("roadmap.durationLabel"))).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tests 6–8 — Additional coverage (TDD workflow; extends Part 1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("Test 6: assembleReel applies safe defaults for missing nested fields", () => {
+  test("missing extracted strings and roadmap copy fall back to empty or placeholder values", () => {
+    const minimalAI: Record<string, unknown> = {
+      platform: "youtube",
+      creator: "@minimal",
+      thumbnailHue: "clay-300",
+      caption: "Caption only",
+      extracted: {},
+      roadmap: {
+        kind: "project",
+        scheduledFor: "2026-05-01T12:00:00",
+      },
+    };
+    const url = "https://youtu.be/minimal123";
+
+    const reel = assembleReel(minimalAI, url);
+
+    expect(reel.extracted.transcript).toBe("");
+    expect(reel.extracted.visualTags).toEqual([]);
+    expect(reel.extracted.locationGuess).toBe("(unknown)");
+    expect(reel.roadmap.title).toBe("Untitled Plan");
+    expect(reel.roadmap.summary).toBe("");
+    expect(reel.roadmap.durationLabel).toBe("");
+    expect(reel.url).toBe(url);
+    expect(reel.roadmap.kind).toBe("project");
+  });
+});
+
+describe("Test 7: validateAIResponse rejects invalid thumbnailHue", () => {
+  test("a structurally complete payload with a wrong hue yields a thumbnailHue error", () => {
+    const badHue: Record<string, unknown> = {
+      platform: "instagram",
+      creator: "@creator",
+      thumbnailHue: "neon-999",
+      caption: "Valid caption",
+      extracted: {
+        transcript: "t",
+        visualTags: [],
+        locationGuess: "Somewhere",
+      },
+      roadmap: {
+        kind: "route",
+        title: "T",
+        summary: "S",
+        durationLabel: "1h",
+        scheduledFor: "2026-05-01T09:00:00",
+      },
+    };
+
+    const errors = validateAIResponse(badHue);
+
+    expect(errors.some((e) => e.includes("Invalid thumbnailHue"))).toBe(true);
+    expect(errors.some((e) => e.includes("neon-999"))).toBe(true);
+  });
+});
+
+describe("Test 8: validateAIResponse rejects invalid roadmap.kind", () => {
+  test("a structurally complete payload with a non-route/non-project kind is rejected", () => {
+    const badKind: Record<string, unknown> = {
+      platform: "tiktok",
+      creator: "@creator",
+      thumbnailHue: "moss-400",
+      caption: "Valid caption",
+      extracted: {
+        transcript: "t",
+        visualTags: ["a"],
+        locationGuess: "Here",
+      },
+      roadmap: {
+        kind: "itinerary",
+        title: "T",
+        summary: "S",
+        durationLabel: "1h",
+        scheduledFor: "2026-05-01T09:00:00",
+      },
+    };
+
+    const errors = validateAIResponse(badKind);
+
+    expect(errors.some((e) => e.includes('Invalid roadmap.kind'))).toBe(true);
+    expect(errors.some((e) => e.includes("itinerary"))).toBe(true);
   });
 });
