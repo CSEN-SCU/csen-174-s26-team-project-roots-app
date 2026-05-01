@@ -8,9 +8,12 @@
  * Test 3 ❌  User can log in  (DESIGNED TO FAIL — auth not yet implemented)
  * Test 4 ✅  Back end turns AI JSON into the correct Reel shape
  * Test 5 ✅  AI output contains all required JSON fields
- * Test 6 ✅  assembleReel applies safe defaults when nested fields are missing
- * Test 7 ✅  validateAIResponse rejects invalid thumbnailHue values
- * Test 8 ✅  validateAIResponse rejects invalid roadmap.kind values
+ * Test 6 ✅  assembleReel applies safe defaults when nested fields are missing (TDD)
+ * Test 7 ✅  validateAIResponse rejects invalid thumbnailHue values (TDD)
+ * Test 8 ✅  validateAIResponse rejects invalid roadmap.kind values (TDD)
+ *
+ * Tests 6–8 were written with `.cursor/skills/test-driven-development/SKILL.md`:
+ * RED (failing test) → verify failure → GREEN (minimal code) → verify pass → repeat.
  */
 
 import type { Reel } from "@/lib/types";
@@ -405,8 +408,11 @@ describe("Test 5: AI output contains all required JSON fields", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tests 6–8 — Additional coverage (TDD workflow; extends Part 1)
+// Tests 6–8 — TDD per `.cursor/skills/test-driven-development/SKILL.md`
+// RED: add one test, run Jest, confirm expected failure.
+// GREEN: smallest change to helpers so that test (and prior tests) pass.
 // ─────────────────────────────────────────────────────────────────────────────
+
 
 describe("Test 6: assembleReel applies safe defaults for missing nested fields", () => {
   test("missing extracted strings and roadmap copy fall back to empty or placeholder values", () => {
@@ -487,7 +493,7 @@ describe("Test 8: validateAIResponse rejects invalid roadmap.kind", () => {
 
     const errors = validateAIResponse(badKind);
 
-    expect(errors.some((e) => e.includes('Invalid roadmap.kind'))).toBe(true);
+    expect(errors.some((e) => e.includes("Invalid roadmap.kind"))).toBe(true);
     expect(errors.some((e) => e.includes("itinerary"))).toBe(true);
   });
 });
