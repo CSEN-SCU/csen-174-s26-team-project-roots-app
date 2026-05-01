@@ -7,7 +7,7 @@
  * Test 2 ✅  Link is received and platform is detected
  * Test 3 ❌  User can log in  (DESIGNED TO FAIL — auth not yet implemented)
  * Test 4 ✅  Back end turns AI JSON into the correct Reel shape
- * Test 5 ✅  AI output contains all required JSON fields
+ * Test 5 ✅  Model JSON is fit for a user-visible plan (schema + domain shape)
  * Test 6 ✅  assembleReel applies safe defaults when nested fields are missing (TDD)
  * Test 7 ✅  validateAIResponse rejects invalid thumbnailHue values (TDD)
  * Test 8 ✅  validateAIResponse rejects invalid roadmap.kind values (TDD)
@@ -20,8 +20,10 @@ import type { Reel } from "@/lib/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper functions
-// These mirror the pure logic in /api/extract/route.ts so we can test it
-// in isolation without making real network or AI calls.
+// assembleReel mirrors reel construction in /api/extract/route.ts.
+// validateAIResponse adds the same required-field checks plus domain rules
+// (stops/steps presence, visualTags array) so tests encode planner-ready JSON;
+// sync the route when you want the API to reject the same bad model output.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function detectPlatform(url: string): "instagram" | "tiktok" | "youtube" | "upload" {
@@ -70,6 +72,37 @@ function validateAIResponse(data: Record<string, unknown>): string[] {
     errors.push(`Invalid roadmap.kind: "${kind}". Must be "route" or "project"`);
   }
 
+  const roadmap = data.roadmap as Record<string, unknown> | undefined;
+  if (
+    roadmap &&
+    typeof roadmap === "object" &&
+    VALID_ROADMAP_KINDS.includes(kind as (typeof VALID_ROADMAP_KINDS)[number])
+  ) {
+    if (kind === "route") {
+      const stops = roadmap.stops;
+      if (!Array.isArray(stops) || stops.length === 0) {
+        errors.push(
+          "route roadmap must include at least one stop (travelers need a place to go)"
+        );
+      }
+    }
+    if (kind === "project") {
+      const steps = roadmap.steps;
+      if (!Array.isArray(steps) || steps.length === 0) {
+        errors.push(
+          "project roadmap must include at least one step (people need actionable tasks)"
+        );
+      }
+    }
+  }
+
+  if (data.extracted && typeof data.extracted === "object") {
+    const ex = data.extracted as Record<string, unknown>;
+    if ("visualTags" in ex && ex.visualTags != null && !Array.isArray(ex.visualTags)) {
+      errors.push('extracted.visualTags must be an array (not a single string or object)');
+    }
+  }
+
   return errors;
 }
 
@@ -102,6 +135,30 @@ function assembleReel(ai: Record<string, unknown>, url: string): Reel {
     },
     createdAt: new Date().toISOString(),
   };
+}
+
+/**
+ * User outcome (not implementation detail): if validation passes, the same JSON we would
+ * persist must assemble into a reel a human can actually use in the planner (copy, places, tags).
+ * Refactors that preserve behavior should keep this green without changing the test.
+ */
+function assertValidatedModelPlanWorksEndToEndInTheUi(
+  data: Record<string, unknown>,
+  sourceUrl: string
+): void {
+  expect(validateAIResponse(data)).toEqual([]);
+  const reel = assembleReel(data, sourceUrl);
+  expect(reel.caption.trim().length).toBeGreaterThan(0);
+  expect(reel.roadmap.title.trim().length).toBeGreaterThan(0);
+  expect(reel.extracted.transcript.trim().length).toBeGreaterThan(0);
+  expect(Array.isArray(reel.extracted.visualTags)).toBe(true);
+  expect(reel.extracted.visualTags.length).toBeGreaterThan(0);
+  if (reel.roadmap.kind === "route") {
+    expect((reel.roadmap.stops?.length ?? 0) > 0).toBe(true);
+  }
+  if (reel.roadmap.kind === "project") {
+    expect((reel.roadmap.steps?.length ?? 0) > 0).toBe(true);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -320,12 +377,11 @@ describe("Test 4: Back end turns AI JSON into the correct Reel shape for the UI"
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TEST 5 — Does the AI properly convert input into JSON with all required fields?
+// TEST 5 — Can we trust model JSON enough to show a real plan? (schema + domain shape)
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe("Test 5: AI output contains all required JSON fields", () => {
-  test("a complete AI response passes field validation with zero errors", () => {
-    // ARRANGE — raw JSON string as the AI returns it (before we parse it in route.ts)
+describe("Test 5: Model JSON is fit to turn into a user-visible day plan", () => {
+  test("when the model returns a valid route payload, validation passes and the app can assemble a planner-ready reel", () => {
     const rawAIOutput = `{
       "platform": "instagram",
       "creator": "@bayareatrails",
@@ -361,49 +417,105 @@ describe("Test 5: AI output contains all required JSON fields", () => {
       }
     }`;
 
-    // ACT — parse the raw string and run the same validation the app uses
     const parsed = JSON.parse(rawAIOutput) as Record<string, unknown>;
-    const errors = validateAIResponse(parsed);
+    const sourceUrl = "https://www.instagram.com/reel/uvas-demo";
 
-    // ASSERT — no missing or invalid fields
-    expect(errors).toHaveLength(0);
-    expect(parsed.platform).toBe("instagram");
-    expect(VALID_THUMBNAIL_HUES).toContain(parsed.thumbnailHue);
-    expect(VALID_ROADMAP_KINDS).toContain((parsed.roadmap as Record<string, unknown>).kind);
-    expect((parsed.extracted as Record<string, unknown[]>).visualTags).toHaveLength(4);
-    expect((parsed.roadmap as Record<string, unknown[]>).stops).toHaveLength(1);
+    assertValidatedModelPlanWorksEndToEndInTheUi(parsed, sourceUrl);
+    expect((parsed.roadmap as Record<string, unknown>).kind).toBe("route");
   });
 
-  test("an AI response with missing fields is caught and reported precisely", () => {
-    // ARRANGE — intentionally incomplete response: missing thumbnailHue,
-    //           roadmap.durationLabel, and extracted.locationGuess
+  test("when the model omits logistics users need, we refuse the payload (stable field paths, not exact error copy)", () => {
+    // Domain: card theming, map context, and schedule copy are required for a credible plan.
+    // Include a step so failures are only about the intentional gaps (not project-without-steps).
     const incompleteResponse: Record<string, unknown> = {
       platform: "youtube",
       creator: "@someCreator",
-      // thumbnailHue intentionally omitted
       caption: "A test plan",
       extracted: {
         transcript: "Some transcript text.",
         visualTags: ["tag1", "tag2"],
-        // locationGuess intentionally omitted
       },
       roadmap: {
         kind: "project",
         title: "Test Project Plan",
         summary: "A project plan summary.",
-        // durationLabel intentionally omitted
         scheduledFor: "2026-04-25T10:00:00",
+        steps: [
+          {
+            id: "p1",
+            title: "Do the thing",
+            detail: "One step so the plan is not empty.",
+            durationMin: 15,
+          },
+        ],
       },
     };
 
-    // ACT
     const errors = validateAIResponse(incompleteResponse);
+    const joined = errors.join("\n");
 
-    // ASSERT — each omitted field is reported
     expect(errors.length).toBeGreaterThan(0);
-    expect(errors.some((e) => e.includes("thumbnailHue"))).toBe(true);
-    expect(errors.some((e) => e.includes("extracted.locationGuess"))).toBe(true);
-    expect(errors.some((e) => e.includes("roadmap.durationLabel"))).toBe(true);
+    expect(joined).toContain("thumbnailHue");
+    expect(joined).toContain("locationGuess");
+    expect(joined).toContain("durationLabel");
+  });
+
+  test("when the model declares a route but sends no stops, we block it (empty itinerary)", () => {
+    const routeWithNoStops: Record<string, unknown> = {
+      platform: "youtube",
+      creator: "@creator",
+      thumbnailHue: "moss-300",
+      caption: "A day out",
+      extracted: {
+        transcript: "We visit several spots downtown.",
+        visualTags: ["street", "café", "signage", "transit"],
+        locationGuess: "Downtown, Example City, CA",
+      },
+      roadmap: {
+        kind: "route",
+        title: "Downtown crawl",
+        summary: "Walkable stops.",
+        durationLabel: "Saturday · 10 AM – 2 PM",
+        scheduledFor: "2026-05-10T10:00:00",
+        stops: [],
+      },
+    };
+
+    const errors = validateAIResponse(routeWithNoStops);
+    expect(
+      errors.some(
+        (e) =>
+          e.includes("stop") &&
+          (e.includes("route") || e.includes("travelers") || e.includes("place"))
+      )
+    ).toBe(true);
+  });
+
+  test("when the model sends visualTags as one string (common LLM slip), we reject it", () => {
+    const stringTags: Record<string, unknown> = {
+      platform: "tiktok",
+      creator: "@creator",
+      thumbnailHue: "clay-400",
+      caption: "Tags wrong shape",
+      extracted: {
+        transcript: "Narration.",
+        visualTags: "waterfall, trail, parking lot",
+        locationGuess: "Somewhere, CA",
+      },
+      roadmap: {
+        kind: "project",
+        title: "Fix tags",
+        summary: "Should be an array.",
+        durationLabel: "1 hour",
+        scheduledFor: "2026-05-01T12:00:00",
+        steps: [
+          { id: "p1", title: "Step", detail: "Detail", durationMin: 10 },
+        ],
+      },
+    };
+
+    const errors = validateAIResponse(stringTags);
+    expect(errors.some((e) => e.toLowerCase().includes("visualtags"))).toBe(true);
   });
 });
 
@@ -460,6 +572,17 @@ describe("Test 7: validateAIResponse rejects invalid thumbnailHue", () => {
         summary: "S",
         durationLabel: "1h",
         scheduledFor: "2026-05-01T09:00:00",
+        stops: [
+          {
+            id: "s1",
+            name: "Somewhere",
+            category: "Spot",
+            address: "1 Main St, City, ST 00000",
+            lat: 0,
+            lng: 0,
+            hours: "9–5",
+          },
+        ],
       },
     };
 
