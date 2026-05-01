@@ -1,6 +1,8 @@
 # Sprint 1 Testing
 
 ## Part 1 & 2
+test directory:
+csen-174-s26-team-project-roots-app\Roots\__tests__\roots.test.ts
 ![Tests_screenshot](./images/test_ex.png)
 
 ## Part 3
