@@ -1,3 +1,5 @@
+# Configure API keys only under Repo Settings > Secrets and variables > Actions.
+# Reference them as ${{ secrets.NAME }} below — never commit secret values.
 name: CI
 
 on:
