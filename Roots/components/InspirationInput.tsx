@@ -12,17 +12,50 @@ const STAGES: { key: ExtractionStage; label: string; emoji: string }[] = [
   { key: "weather", label: "Checking weather", emoji: "🌤" },
 ];
 
+function validateVideoUrl(raw: string): string | null {
+  if (!raw.trim()) return "Please enter a URL.";
+  let parsed: URL;
+  try {
+    parsed = new URL(raw.trim());
+  } catch {
+    return "That doesn't look like a valid URL. Paste a YouTube Shorts, Instagram Reel, or TikTok link.";
+  }
+  if (parsed.protocol !== "https:") {
+    return "Only HTTPS URLs are accepted.";
+  }
+  const host = parsed.hostname.replace(/^www\./, "");
+  const path = parsed.pathname;
+  if (host === "youtube.com" && path.startsWith("/shorts/")) return null;
+  if (host === "youtu.be") return null;
+  if (host === "instagram.com" && path.startsWith("/reel/")) return null;
+  if (host === "tiktok.com") return null;
+  if (host === "vm.tiktok.com") return null;
+  return "Only YouTube Shorts (youtube.com/shorts/…), Instagram Reels (instagram.com/reel/…), and TikTok links are supported.";
+}
+
 export function InspirationInput() {
   const { reels, addReel, selectReel, selectedReelId } = useRoots();
   const [url, setUrl] = useState("");
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [stage, setStage] = useState<ExtractionStage>("idle");
   const [activeStageIdx, setActiveStageIdx] = useState(-1);
   const [extractError, setExtractError] = useState<string | null>(null);
 
+  function handleUrlChange(value: string) {
+    setUrl(value);
+    if (urlError) setUrlError(null);
+  }
+
   async function handleExtract() {
-    const extractUrl = url.trim() || "https://instagram.com/reel/demo-extraction";
-    if (!url.trim()) setUrl(extractUrl);
+    const trimmed = url.trim();
+    const validationError = validateVideoUrl(trimmed);
+    if (validationError) {
+      setUrlError(validationError);
+      return;
+    }
+    const extractUrl = trimmed;
     setExtractError(null);
+    setUrlError(null);
     setStage("fetching");
     setActiveStageIdx(0);
 
@@ -95,10 +128,14 @@ export function InspirationInput() {
           <span className="text-ink/40">🔗</span>
           <input
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => handleUrlChange(e.target.value)}
             disabled={isProcessing}
             placeholder="Paste a Reel, TikTok, or YouTube Short URL…"
             className="flex-1 bg-transparent outline-none text-sm placeholder:text-ink/35"
+            type="url"
+            inputMode="url"
+            autoComplete="off"
+            spellCheck={false}
           />
           {url && !isProcessing && (
             <button
@@ -128,6 +165,13 @@ export function InspirationInput() {
         </button>
       </div>
 
+      {/* URL validation error */}
+      {urlError && (
+        <p className="mt-2 text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2">
+          ⚠️ {urlError}
+        </p>
+      )}
+
       {/* Error display */}
       {extractError && (
         <p className="mt-2 text-xs text-red-500 bg-red-50 rounded-xl px-3 py-2">
@@ -139,9 +183,9 @@ export function InspirationInput() {
       <div className="mt-3 flex flex-wrap gap-2 text-xs">
         <span className="text-ink/40">Try:</span>
         {[
-          { label: "🥾 Hike reel", value: "https://instagram.com/reel/uvas-canyon" },
-          { label: "🛍 Thrift route", value: "https://tiktok.com/@thriftedfits/v/1" },
-          { label: "🏺 Craft tutorial", value: "https://youtube.com/shorts/coil-mug" },
+          { label: "🥾 Hike reel", value: "https://www.instagram.com/reel/uvas-canyon" },
+          { label: "🛍 Thrift route", value: "https://www.tiktok.com/@thriftedfits/video/1" },
+          { label: "🏺 Craft tutorial", value: "https://www.youtube.com/shorts/coil-mug" },
         ].map((s) => (
           <button
             key={s.value}

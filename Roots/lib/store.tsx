@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -11,8 +12,8 @@ import {
   mockChat,
   mockMembers,
   mockProposals,
-  mockReels,
 } from "./mockData";
+import { loadReels, saveReels } from "./reelStorage";
 import type {
   ChatMessage,
   GroupProposal,
@@ -44,6 +45,7 @@ interface RootsState {
   chat: ChatMessage[];
   calendar: CalendarEvent[];
   activeUserId: string;
+  userName: string;
   activeTab: TabName;
   pendingSchedule: PendingSchedule | null;
   setActiveTab: (tab: TabName) => void;
@@ -58,15 +60,30 @@ interface RootsState {
 
 const RootsContext = createContext<RootsState | null>(null);
 
-export function RootsProvider({ children }: { children: React.ReactNode }) {
-  const [reels, setReels] = useState<Reel[]>(mockReels);
-  const [selectedReelId, setSelectedReelId] = useState<string>(mockReels[0].id);
+export function RootsProvider({
+  userId,
+  userName,
+  children,
+}: {
+  userId: string;
+  userName: string;
+  children: React.ReactNode;
+}) {
+  const [reels, setReels] = useState<Reel[]>(() => loadReels(userId));
+  const [selectedReelId, setSelectedReelId] = useState<string>(() => {
+    const saved = loadReels(userId);
+    return saved.length > 0 ? saved[0].id : "";
+  });
   const [proposals, setProposals] = useState<GroupProposal[]>(mockProposals);
   const [chat, setChat] = useState<ChatMessage[]>(mockChat);
   const [calendar, setCalendar] = useState<CalendarEvent[]>([]);
   const [activeTab, setActiveTab] = useState<TabName>("schedule");
   const [pendingSchedule, setPendingScheduleState] = useState<PendingSchedule | null>(null);
-  const activeUserId = "u-roland";
+  const activeUserId = userId;
+
+  useEffect(() => {
+    saveReels(userId, reels);
+  }, [userId, reels]);
 
   const handleSetActiveTab = useCallback((tab: TabName) => setActiveTab(tab), []);
   const selectReel = useCallback((id: string) => setSelectedReelId(id), []);
@@ -163,6 +180,7 @@ export function RootsProvider({ children }: { children: React.ReactNode }) {
       chat,
       calendar,
       activeUserId,
+      userName,
       activeTab,
       pendingSchedule,
       setActiveTab: handleSetActiveTab,
@@ -180,6 +198,8 @@ export function RootsProvider({ children }: { children: React.ReactNode }) {
       proposals,
       chat,
       calendar,
+      activeUserId,
+      userName,
       activeTab,
       pendingSchedule,
       handleSetActiveTab,
