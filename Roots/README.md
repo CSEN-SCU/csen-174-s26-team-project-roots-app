@@ -33,13 +33,15 @@ State is held in React context (`lib/store.tsx`) with realistic mock seeds in `l
 npm install
 ```
 
-Create **`Roots/.env.local`**:
+Create **`Roots/.env.local`** (see `.env.example`):
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-api03-...
+# Optional: default is 5 extractions per hour per client IP
+# RATE_LIMIT_EXTRACT=5 per hour
 ```
 
-Without a key, extraction requests will fail at runtime.
+Without a key, extraction requests will fail at runtime. **`POST /api/extract`** is rate-limited per client IP to protect the shared Anthropic key (returns **429** when exceeded).
 
 ## Scripts
 

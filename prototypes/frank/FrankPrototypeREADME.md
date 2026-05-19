@@ -49,4 +49,7 @@ Do **not** paste your Instagram password into the app—only developer tokens if
 
 See `.env.example` for `OPENAI_API_KEY`, optional `OPENAI_MODEL`, and `PORT`.
 
+**Rate limits** (per client IP, configurable via `RATE_LIMIT_DEFAULT` and `RATE_LIMIT_EXTRACT`):
+all `/api/*` routes share a general cap; **place extraction** has a stricter limit because it calls OpenAI.
+
 Backend knobs in `app/config.py`: `max_place_radius_km`, `avg_urban_speed_kmh`.

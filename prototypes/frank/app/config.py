@@ -28,3 +28,7 @@ database_url: str = _env(
 port: int = int(_env("PORT", "8787") or "8787")
 max_place_radius_km: float = float(_env("MAX_PLACE_RADIUS_KM", "75") or "75")
 avg_urban_speed_kmh: float = float(_env("AVG_URBAN_SPEED_KMH", "18") or "18")
+
+# Per client IP (see app/rate_limit.py). Extract hits OpenAI + Nominatim.
+rate_limit_default: str = _env("RATE_LIMIT_DEFAULT", "120 per hour") or "120 per hour"
+rate_limit_extract: str = _env("RATE_LIMIT_EXTRACT", "5 per hour") or "5 per hour"

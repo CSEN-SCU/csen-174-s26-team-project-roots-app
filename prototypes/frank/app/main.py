@@ -17,6 +17,7 @@ from app.services.itinerary import (
     ensure_destination_coords,
     itinerary_to_json_payload,
 )
+from app.rate_limit import init_rate_limiting, limiter
 from app.services.llm import (
     default_hours_for_category,
     extract_places_from_reels,
@@ -31,6 +32,7 @@ app = Flask(
     static_folder=str(STATIC_DIR),
     static_url_path="/static",
 )
+init_rate_limiting(app)
 
 
 def _session() -> Session:
@@ -241,6 +243,7 @@ def load_demo_reels(trip_id: int):
 
 
 @app.post("/api/trips/<int:trip_id>/extract")
+@limiter.limit(config.rate_limit_extract, override_defaults=True)
 def extract_places(trip_id: int):
     db = _session()
     try:

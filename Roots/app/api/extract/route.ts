@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { rateLimitExtract } from "@/lib/rateLimit";
 import type { Reel, Stop, Weather } from "@/lib/types";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -229,6 +230,20 @@ async function fetchWeather(lat: number, lng: number): Promise<Weather | null> {
 }
 
 export async function POST(req: NextRequest) {
+  const rateLimit = rateLimitExtract(req);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        error:
+          "Too many extraction requests. Please wait before trying again (rate limits protect shared API usage).",
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(rateLimit.retryAfterSec) },
+      }
+    );
+  }
+
   try {
     const body = await req.json();
     const url: string = body?.url;
