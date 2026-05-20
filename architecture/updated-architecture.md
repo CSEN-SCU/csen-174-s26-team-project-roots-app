@@ -1,6 +1,6 @@
 # Roots Application Architecture (C4)
 
-Architecture of the **Roots** Next.js app as implemented in [`Roots/`](../Roots/). Reflects the codebase after the latest `main` sync (live extraction, client auth, `localStorage` persistence, Schedule + Calendar as the default shell).
+Architecture of the **Roots** Next.js app as implemented in [`Roots/`](../Roots/). Reflects the codebase after the Supabase migration on `main` (live extraction, Supabase Auth, Postgres reel persistence, Schedule + Calendar as the default shell).
 
 > The sibling file [`architecture.md`](./architecture.md) holds earlier high-level data-flow sketches. This document is the C4 view of the **current** Roots implementation.
 
@@ -12,11 +12,12 @@ Architecture of the **Roots** Next.js app as implemented in [`Roots/`](../Roots/
 |--------|-------------------------|
 | **Purpose** | Turn Instagram / TikTok / YouTube URLs into actionable **routes** or **projects**, with map, weather, and calendar scheduling |
 | **Deployable unit** | Single Next.js 14 application (App Router) |
-| **Server persistence** | None — no database |
-| **Client persistence** | `localStorage` (users, session, reels per user) |
-| **AI & enrichment** | `POST /api/extract` orchestrates oEmbed, Claude, Nominatim, Open-Meteo |
+| **Auth** | Supabase Auth — email / password, JWT session managed by Supabase client |
+| **Server persistence** | Supabase PostgreSQL — `reels` table (JSONB), one row per reel per user |
+| **Client persistence** | Supabase JS SDK handles session token in `localStorage`; no custom keys |
+| **AI & enrichment** | `POST /api/extract` orchestrates oEmbed → Claude → Nominatim → Open-Meteo |
 | **Default UI** | Login → Schedule (extract + roadmap + map) ↔ Calendar |
-| **In repo, not default home** | Group / Gerardbot views (`GroupView`, `GerardbotChat`, etc.) backed by mock data in context |
+| **In repo, not default** | Group / Gerardbot views (`GroupView`, `GerardbotChat`, etc.) backed by mock data in context |
 
 ---
 
@@ -32,19 +33,18 @@ C4Context
 
     System(roots, "Roots", "Context-aware planner: social link in → structured route or project out, with geocoding, weather, map, and calendar.")
 
-    System_Ext(social, "Social video platforms", "Instagram Reels, TikTok, YouTube Shorts — content identified by user-supplied HTTPS URLs.")
+    System_Ext(supabase, "Supabase", "Managed auth and PostgreSQL database — stores user accounts and extracted reels, accessible from any device.")
     System_Ext(anthropic, "Anthropic API", "Claude (claude-sonnet-4-6) synthesizes metadata into JSON plans.")
     System_Ext(oembed, "Platform oEmbed", "YouTube and TikTok oEmbed endpoints for title and creator metadata.")
     System_Ext(nominatim, "OpenStreetMap Nominatim", "Forward geocoding of stop addresses (1 req/sec discipline).")
     System_Ext(meteo, "Open-Meteo", "Current weather for the first geocoded route stop.")
 
     Rel(planner, roots, "Uses via browser", "HTTPS")
-    Rel(planner, social, "Copies link from")
-    Rel(roots, anthropic, "Extracts plans via", "API key (server)")
-    Rel(roots, oembed, "Fetches metadata", "HTTPS")
-    Rel(roots, nominatim, "Geocodes stops", "HTTPS")
-    Rel(roots, meteo, "Enriches routes", "HTTPS")
-    Rel(roots, social, "URL references content on")
+    Rel(roots, supabase, "Auth + reel storage", "HTTPS / Supabase JS SDK")
+    Rel(roots, anthropic, "Extracts plans via", "API key (server-side only)")
+    Rel(roots, oembed, "Fetches video metadata", "HTTPS")
+    Rel(roots, nominatim, "Geocodes stop addresses", "HTTPS, sequential")
+    Rel(roots, meteo, "Fetches weather forecast", "HTTPS")
 ```
 
 ---
@@ -60,8 +60,12 @@ C4Container
     Person(planner, "Planner", "End user in a web browser.")
 
     System_Boundary(roots, "Roots") {
-        Container(web, "Roots Web Application", "Next.js 14, React 18, TypeScript", "Serves UI (App Router + client components) and server API route POST /api/extract.")
-        ContainerDb(browser_store, "Browser localStorage", "Per-origin key/value store", "Users, session, and extracted reels keyed by userId. No server-side DB.")
+        Container(web, "Roots Web Application", "Next.js 14, React 18, TypeScript", "Serves the SPA (App Router + client components) and the server-side API route POST /api/extract.")
+    }
+
+    System_Boundary(supabase_boundary, "Supabase (managed cloud)") {
+        Container(sb_auth, "Supabase Auth", "Email / password auth service", "Issues and validates JWTs. Stores user accounts. Session token cached in browser by the Supabase JS SDK.")
+        ContainerDb(sb_db, "PostgreSQL", "Supabase-managed Postgres", "reels table — one JSONB row per reel per user, protected by Row Level Security (auth.uid() = user_id).")
     }
 
     System_Ext(anthropic, "Anthropic API", "LLM extraction")
@@ -70,11 +74,12 @@ C4Container
     System_Ext(meteo, "Open-Meteo", "Weather")
 
     Rel(planner, web, "Uses", "HTTPS")
-    Rel(web, browser_store, "Reads/writes", "Client JS")
-    Rel(web, anthropic, "messages.create", "Server, ANTHROPIC_API_KEY")
-    Rel(web, oembed, "fetch metadata", "Server")
-    Rel(web, nominatim, "geocode stops", "Server, sequential")
-    Rel(web, meteo, "forecast", "Server")
+    Rel(web, sb_auth, "register / login / getSession / signOut", "Supabase JS SDK (browser)")
+    Rel(web, sb_db, "loadReels (SELECT) / upsertReel (UPSERT)", "Supabase JS SDK (browser, RLS-gated)")
+    Rel(web, anthropic, "messages.create", "Server-side, ANTHROPIC_API_KEY")
+    Rel(web, oembed, "fetch video metadata", "Server-side")
+    Rel(web, nominatim, "geocode stops", "Server-side, sequential")
+    Rel(web, meteo, "fetch forecast", "Server-side")
 ```
 
 ### Container notes
@@ -82,11 +87,14 @@ C4Container
 | Container | Technology | Responsibilities |
 |-----------|------------|------------------|
 | **Roots Web Application** | Next.js App Router, Tailwind, Leaflet (client-only) | Auth gate, Schedule/Calendar UI, extraction API, in-memory rate limit |
-| **Browser localStorage** | Web Storage API | `roots_users`, `roots_session`, `roots_reels_{userId}` |
+| **Supabase Auth** | Supabase managed service | User accounts, password hashing, JWT issuance, session refresh |
+| **PostgreSQL (reels)** | Supabase-managed Postgres | `reels(id TEXT, user_id UUID, data JSONB, created_at TIMESTAMPTZ)` — Row Level Security ensures each user only sees their own rows |
 
 Environment variables (see [`Roots/.env.example`](../Roots/.env.example)):
 
-- `ANTHROPIC_API_KEY` — required for extraction
+- `ANTHROPIC_API_KEY` — required for extraction (server-side only)
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — Supabase anon / publishable key (safe to expose in browser; RLS enforces access)
 - `RATE_LIMIT_EXTRACT` — optional, default `5 per hour` per client IP
 
 ---
@@ -101,28 +109,36 @@ C4Component
 
     Container_Boundary(web, "Roots Web Application") {
         Component(page, "app/page.tsx", "Server entry", "Renders ClientRoot.")
-        Component(shell, "Client shell", "ClientRoot, LoginPage, TopBar, ActiveTabRouter", "Session gate; Schedule vs Calendar tabs.")
+        Component(shell, "Client shell", "ClientRoot, LoginPage, TopBar, ActiveTabRouter", "Session gate; config-error screen; Schedule vs Calendar tabs.")
         Component(schedule, "Schedule module", "ScheduleView, InspirationInput, RoadmapView", "URL input, staged progress UI, reel strip, plan detail.")
         Component(map, "Map module", "MapViewClient (dynamic Leaflet)", "Route stops on map when kind=route.")
         Component(calendar, "Calendar module", "CalendarView", "Day/week/month; place solo events from roadmap.")
-        Component(state, "RootsProvider", "lib/store.tsx", "Reels, selection, calendar events, mock group/chat data.")
-        Component(auth, "Auth module", "lib/auth.ts", "Register/login, SHA-256 passwords, session in localStorage.")
-        Component(storage, "Reel persistence", "lib/reelStorage.ts", "load/save reels per userId.")
+        Component(state, "RootsProvider", "lib/store.tsx", "Reels (loaded async from Supabase), selection, calendar events, mock group/chat data.")
+        Component(auth, "Auth module", "lib/auth.ts", "register/login/logout/getSession/onAuthStateChange via Supabase Auth.")
+        Component(supabase_lib, "Supabase client", "lib/supabase.ts", "Typed singleton SupabaseClient. Accepts NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY or ANON_KEY.")
+        Component(storage, "Reel persistence", "lib/reelStorage.ts", "loadReels (SELECT from reels table) / upsertReel (UPSERT into reels table).")
         Component(api, "Extract API", "app/api/extract/route.ts", "Rate limit → oEmbed → Claude → parse → geocode → weather → Reel JSON.")
         Component(ratelimit, "Rate limiter", "lib/rateLimit.ts", "Sliding window per IP (in-memory, single process).")
         Component(types, "Domain types", "lib/types.ts", "Reel, Roadmap, Stop, Weather, group types.")
     }
 
+    Container(sb_auth, "Supabase Auth", "Managed auth service")
+    ContainerDb(sb_db, "PostgreSQL", "reels table")
+
     Rel(page, shell, "Renders")
-    Rel(shell, auth, "getSession / login")
-    Rel(shell, state, "Wraps with RootsProvider")
+    Rel(shell, auth, "getSession / onAuthStateChange / clearSession")
+    Rel(shell, state, "Wraps app with RootsProvider on auth")
     Rel(shell, schedule, "schedule tab")
     Rel(shell, calendar, "calendar tab")
     Rel(schedule, state, "useRoots")
     Rel(schedule, api, "POST /api/extract", "fetch")
     Rel(schedule, map, "RoadmapView embeds")
     Rel(calendar, state, "scheduleReel, pendingSchedule")
-    Rel(state, storage, "persist reels")
+    Rel(state, storage, "loadReels on mount / upsertReel on addReel")
+    Rel(auth, supabase_lib, "uses")
+    Rel(storage, supabase_lib, "uses")
+    Rel(supabase_lib, sb_auth, "auth.signUp / signIn / getSession / onAuthStateChange")
+    Rel(supabase_lib, sb_db, "from('reels').select / upsert")
     Rel(api, ratelimit, "rateLimitExtract")
     Rel(api, types, "builds Reel")
 ```
@@ -132,10 +148,10 @@ C4Component
 | Area | Key files | Role |
 |------|-----------|------|
 | **App** | `app/layout.tsx`, `app/page.tsx`, `app/api/extract/route.ts` | Layout, home, extraction orchestration |
-| **Shell** | `components/ClientRoot.tsx`, `LoginPage.tsx`, `TopBar.tsx`, `ActiveTabRouter.tsx` | Auth + tab routing |
+| **Shell** | `components/ClientRoot.tsx`, `LoginPage.tsx`, `TopBar.tsx`, `ActiveTabRouter.tsx` | Auth + tab routing, config-error screen |
 | **Schedule** | `ScheduleView.tsx`, `InspirationInput.tsx`, `RoadmapView.tsx`, `MapViewClient.tsx` | Primary user journey |
 | **Calendar** | `CalendarView.tsx` | Timeline placement |
-| **Lib** | `store.tsx`, `auth.ts`, `reelStorage.ts`, `rateLimit.ts`, `types.ts`, `mockData.ts` | State, auth, persistence, limits, seeds |
+| **Lib** | `store.tsx`, `auth.ts`, `reelStorage.ts`, `supabase.ts`, `rateLimit.ts`, `types.ts`, `mockData.ts` | State, auth, persistence, Supabase client, limits, seeds |
 | **Latent UI** | `GroupView.tsx`, `GerardbotChat.tsx`, `TodayView.tsx`, `RoadmapsView.tsx` | Not mounted on default `page.tsx`; store still holds mock proposals/chat |
 
 ---
@@ -155,6 +171,7 @@ sequenceDiagram
     participant GEO as Nominatim
     participant WX as Open-Meteo
     participant Store as RootsProvider
+    participant SB as Supabase (reels table)
 
     User->>UI: Paste URL, submit
     UI->>API: POST { url }
@@ -166,7 +183,7 @@ sequenceDiagram
     API->>OEM: fetchPlatformMeta (YT/TT oEmbed)
     API->>AI: messages.create (system + user metadata)
     AI-->>API: JSON plan (route or project)
-    loop each stop (sequential)
+    loop each stop (sequential, ~1 req/s)
         API->>GEO: geocodeStop(address)
     end
     opt route with geocoded stop
@@ -174,19 +191,20 @@ sequenceDiagram
     end
     API-->>UI: { reel }
     UI->>Store: addReel(reel)
-    Store->>Store: saveReels → localStorage
+    Store->>SB: upsertReel → reels table (JSONB)
 ```
 
 ### Authenticated session and navigation
 
 ```mermaid
 flowchart LR
-    A[ClientRoot] --> B{Session in localStorage?}
-    B -->|no| C[LoginPage]
-    C --> D[register / login → auth.ts]
-    D --> E[RootsProvider]
-    B -->|yes| E
-    E --> F[TopBar: Schedule | Calendar]
+    A[ClientRoot mounts] --> B{Supabase session\ngetSession}
+    B -->|error / not configured| CE[Config error screen]
+    B -->|no session| C[LoginPage]
+    C --> D[register / login\nvia Supabase Auth]
+    D --> E[RootsProvider\nloads reels from Postgres]
+    B -->|session exists| E
+    E --> F[TopBar: Schedule · Calendar]
     F --> G[ActiveTabRouter]
     G --> H[ScheduleView]
     G --> I[CalendarView]
@@ -194,73 +212,97 @@ flowchart LR
 
 ---
 
-## Data model (client)
+## Data model
 
-Core types live in [`Roots/lib/types.ts`](../Roots/lib/types.ts).
+Core TypeScript types live in [`Roots/lib/types.ts`](../Roots/lib/types.ts). Reels are persisted server-side as JSONB.
 
 ```mermaid
 erDiagram
-    Reel ||--|| Roadmap : has
-    Roadmap ||--o{ Stop : "stops (route)"
-    Roadmap ||--o{ ProjectStep : "steps (project)"
-    Roadmap |o--o| Weather : "optional (route)"
+    USER ||--o{ REEL : "owns (user_id FK)"
+    REEL ||--|| ROADMAP : has
+    ROADMAP ||--o{ STOP : "stops (route)"
+    ROADMAP ||--o{ PROJECTSTEP : "steps (project)"
+    ROADMAP |o--o| WEATHER : "optional (route)"
 
-    Reel {
-        string id
-        string platform
-        string url
-        string creator
-        object extracted
+    USER {
+        uuid id
+        string email
+        string name
     }
-    Roadmap {
+    REEL {
+        string id PK
+        uuid user_id FK
+        jsonb data
+        timestamptz created_at
+    }
+    ROADMAP {
         string kind
         string title
         string scheduledFor
     }
-    Stop {
+    STOP {
         float lat
         float lng
         string address
     }
 ```
 
-**Server** does not persist reels; each extraction returns a `Reel` JSON payload consumed by the client.
+**Supabase schema (run in SQL Editor):**
+
+```sql
+CREATE TABLE reels (
+  id          TEXT        PRIMARY KEY,
+  user_id     UUID        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  data        JSONB       NOT NULL,
+  created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE reels ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "read own reels"   ON reels FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "insert own reels" ON reels FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "update own reels" ON reels FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "delete own reels" ON reels FOR DELETE USING (auth.uid() = user_id);
+```
 
 ---
 
-## Deployment view (Level 4 — simplified)
-
-Typical local or hosted deployment: one Node process running Next.js.
+## Deployment view
 
 ```mermaid
 C4Deployment
-    title Roots — Deployment (simplified)
+    title Roots — Deployment
 
-    Deployment_Node(user_device, "User device", "Browser") {
-        Container(browser, "Web browser", "Chrome, Safari, etc.")
-        ContainerDb(ls, "localStorage", "")
+    Deployment_Node(user_device, "User device", "Web browser") {
+        Container(browser, "Browser", "Chrome, Safari, etc.", "Runs the React SPA; Supabase JS SDK stores session JWT in localStorage.")
     }
 
-    Deployment_Node(host, "Application host", "Node 18+") {
-        Container(next, "next start / next dev", "Next.js server")
+    Deployment_Node(host, "Application host", "Node 18+ / Vercel") {
+        Container(next, "next start / next dev", "Next.js server", "Serves pages and /api/extract. Holds ANTHROPIC_API_KEY.")
+    }
+
+    Deployment_Node(supabase_cloud, "Supabase Cloud", "Managed SaaS") {
+        Container(sb_auth_node, "Auth service", "Supabase Auth", "")
+        ContainerDb(sb_pg, "PostgreSQL", "Supabase Postgres", "reels table")
     }
 
     Deployment_Node(cloud_apis, "External APIs", "") {
-        Container(anthropic, "Anthropic", "")
-        Container(geo_apis, "oEmbed, Nominatim, Open-Meteo", "")
+        Container(anthropic, "Anthropic", "claude-sonnet-4-6", "")
+        Container(geo_apis, "oEmbed · Nominatim · Open-Meteo", "", "")
     }
 
-    Rel(browser, next, "HTTPS", "pages + /api/extract")
-    Rel(browser, ls, "")
-    Rel(next, anthropic, "")
-    Rel(next, geo_apis, "")
+    Rel(browser, next, "Pages + /api/extract", "HTTPS")
+    Rel(browser, sb_auth_node, "Auth calls (signIn, getSession)", "HTTPS / Supabase JS")
+    Rel(browser, sb_pg, "reels SELECT / UPSERT", "HTTPS / Supabase JS + RLS")
+    Rel(next, anthropic, "messages.create", "HTTPS")
+    Rel(next, geo_apis, "metadata + geocode + weather", "HTTPS")
 ```
 
 **Operational constraints**
 
-- Rate limiting is **in-process memory** — not shared across multiple server instances.
-- Nominatim usage is **sequential** per request to respect ~1 req/sec policy.
-- Auth is a **prototype** (local passwords in `localStorage`) — not suitable for production without a real IdP.
+- Rate limiting is **in-process memory** — not shared across multiple server instances. A Redis adapter would be needed for multi-instance deployments.
+- Nominatim usage is **sequential** per request to respect the ~1 req/sec policy.
+- Supabase Row Level Security ensures each user can only read and write **their own reels** — the anon/publishable key is safe to expose in the browser.
 
 ---
 
@@ -269,7 +311,7 @@ C4Deployment
 | Layer | Location | Covers |
 |-------|----------|--------|
 | Unit / API | `Roots/__tests__/roots.test.ts`, `rateLimit.test.ts` | Extract route behavior, URL validation, rate limit parsing |
-| Manual | `npm run dev` | End-to-end with `ANTHROPIC_API_KEY` |
+| Manual | `npm run dev` | End-to-end with `ANTHROPIC_API_KEY` + Supabase credentials |
 
 ---
 
