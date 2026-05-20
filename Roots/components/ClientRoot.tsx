@@ -11,11 +11,35 @@ import { ActiveTabRouter } from "./ActiveTabRouter";
 
 export function ClientRoot() {
   const [session, setSession] = useState<UserSession | null | "loading">("loading");
+  const [configError, setConfigError] = useState<string | null>(null);
 
   useEffect(() => {
-    getSession().then(setSession);
-    return onAuthStateChange((s) => setSession(s ?? null));
+    let unsub: (() => void) | undefined;
+    try {
+      getSession()
+        .then(setSession)
+        .catch((err: Error) => {
+          setConfigError(err.message);
+          setSession(null);
+        });
+      unsub = onAuthStateChange((s) => setSession(s ?? null));
+    } catch (err) {
+      setConfigError(err instanceof Error ? err.message : String(err));
+      setSession(null);
+    }
+    return () => unsub?.();
   }, []);
+
+  if (configError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="glass rounded-3xl p-8 max-w-md shadow-soft">
+          <h1 className="font-display text-xl text-ink mb-2">Configuration error</h1>
+          <p className="text-sm text-ink/60 font-mono break-all">{configError}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (session === "loading") return null;
 
