@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getSession, clearSession, type UserSession } from "@/lib/auth";
+import { getSession, clearSession, onAuthStateChange, type UserSession } from "@/lib/auth";
 import { LoginPage } from "./LoginPage";
 import { RootsProvider } from "@/lib/store";
 import { TopBar } from "./TopBar";
@@ -10,11 +10,11 @@ import { CalendarView } from "./CalendarView";
 import { ActiveTabRouter } from "./ActiveTabRouter";
 
 export function ClientRoot() {
-  // "loading" prevents a flash of login before localStorage is read
   const [session, setSession] = useState<UserSession | null | "loading">("loading");
 
   useEffect(() => {
-    setSession(getSession());
+    getSession().then(setSession);
+    return onAuthStateChange((s) => setSession(s ?? null));
   }, []);
 
   if (session === "loading") return null;
@@ -23,13 +23,12 @@ export function ClientRoot() {
     return <LoginPage onAuth={(s) => setSession(s)} />;
   }
 
-  function handleLogout() {
-    clearSession();
+  async function handleLogout() {
+    await clearSession();
     setSession(null);
   }
 
   return (
-    // key ensures a fresh provider (and fresh reel state) whenever the user changes
     <RootsProvider key={session.userId} userId={session.userId} userName={session.name}>
       <TopBar onLogout={handleLogout} />
       <ActiveTabRouter

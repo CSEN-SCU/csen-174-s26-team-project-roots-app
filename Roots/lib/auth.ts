@@ -1,5 +1,4 @@
-// Prototype auth — localStorage + SHA-256 via Web Crypto API.
-// Swap for a real auth provider before production.
+import { getSupabaseClient } from "./supabase";
 
 export interface UserSession {
   userId: string;
@@ -7,54 +6,30 @@ export interface UserSession {
   name: string;
 }
 
-interface StoredUser {
-  id: string;
-  email: string;
-  name: string;
-  passwordHash: string;
+function sessionFromSupabase(user: { id: string; email?: string; user_metadata?: Record<string, string> }): UserSession {
+  return {
+    userId: user.id,
+    email: user.email ?? "",
+    name: user.user_metadata?.name ?? user.email?.split("@")[0] ?? "User",
+  };
 }
 
-const USERS_KEY = "roots_users";
-const SESSION_KEY = "roots_session";
+export async function getSession(): Promise<UserSession | null> {
+  const { data: { session } } = await getSupabaseClient().auth.getSession();
+  return session ? sessionFromSupabase(session.user) : null;
+}
 
-async function hashPassword(password: string): Promise<string> {
-  const buf = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(password)
+export async function clearSession(): Promise<void> {
+  await getSupabaseClient().auth.signOut();
+}
+
+export function onAuthStateChange(
+  callback: (session: UserSession | null) => void
+): () => void {
+  const { data: { subscription } } = getSupabaseClient().auth.onAuthStateChange(
+    (_event, session) => callback(session ? sessionFromSupabase(session.user) : null)
   );
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function readUsers(): StoredUser[] {
-  try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-function writeUsers(users: StoredUser[]): void {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-
-export function getSession(): UserSession | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as UserSession) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function clearSession(): void {
-  localStorage.removeItem(SESSION_KEY);
-}
-
-function writeSession(s: UserSession): void {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  return () => subscription.unsubscribe();
 }
 
 export async function register(
@@ -62,37 +37,26 @@ export async function register(
   name: string,
   password: string
 ): Promise<{ ok: boolean; error?: string; session?: UserSession }> {
-  const normalized = email.toLowerCase().trim();
-  const users = readUsers();
-  if (users.some((u) => u.email === normalized)) {
-    return { ok: false, error: "An account with that email already exists." };
+  const { data, error } = await getSupabaseClient().auth.signUp({
+    email: email.toLowerCase().trim(),
+    password,
+    options: { data: { name: name.trim() } },
+  });
+  if (error) return { ok: false, error: error.message };
+  if (!data.session) {
+    return { ok: false, error: "Check your email to confirm your account, then sign in." };
   }
-  const passwordHash = await hashPassword(password);
-  const user: StoredUser = {
-    id: `u-${Date.now()}`,
-    email: normalized,
-    name: name.trim(),
-    passwordHash,
-  };
-  writeUsers([...users, user]);
-  const session: UserSession = { userId: user.id, email: user.email, name: user.name };
-  writeSession(session);
-  return { ok: true, session };
+  return { ok: true, session: sessionFromSupabase(data.session.user) };
 }
 
 export async function login(
   email: string,
   password: string
 ): Promise<{ ok: boolean; error?: string; session?: UserSession }> {
-  const normalized = email.toLowerCase().trim();
-  const users = readUsers();
-  const user = users.find((u) => u.email === normalized);
-  if (!user) return { ok: false, error: "No account found with that email." };
-  const passwordHash = await hashPassword(password);
-  if (user.passwordHash !== passwordHash) {
-    return { ok: false, error: "Incorrect password." };
-  }
-  const session: UserSession = { userId: user.id, email: user.email, name: user.name };
-  writeSession(session);
-  return { ok: true, session };
+  const { data, error } = await getSupabaseClient().auth.signInWithPassword({
+    email: email.toLowerCase().trim(),
+    password,
+  });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, session: sessionFromSupabase(data.session.user) };
 }

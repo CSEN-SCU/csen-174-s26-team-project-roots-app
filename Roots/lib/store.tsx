@@ -13,7 +13,7 @@ import {
   mockMembers,
   mockProposals,
 } from "./mockData";
-import { loadReels, saveReels } from "./reelStorage";
+import { loadReels, upsertReel } from "./reelStorage";
 import type {
   ChatMessage,
   GroupProposal,
@@ -69,11 +69,8 @@ export function RootsProvider({
   userName: string;
   children: React.ReactNode;
 }) {
-  const [reels, setReels] = useState<Reel[]>(() => loadReels(userId));
-  const [selectedReelId, setSelectedReelId] = useState<string>(() => {
-    const saved = loadReels(userId);
-    return saved.length > 0 ? saved[0].id : "";
-  });
+  const [reels, setReels] = useState<Reel[]>([]);
+  const [selectedReelId, setSelectedReelId] = useState<string>("");
   const [proposals, setProposals] = useState<GroupProposal[]>(mockProposals);
   const [chat, setChat] = useState<ChatMessage[]>(mockChat);
   const [calendar, setCalendar] = useState<CalendarEvent[]>([]);
@@ -82,8 +79,11 @@ export function RootsProvider({
   const activeUserId = userId;
 
   useEffect(() => {
-    saveReels(userId, reels);
-  }, [userId, reels]);
+    loadReels(userId).then((loaded) => {
+      setReels(loaded);
+      if (loaded.length > 0) setSelectedReelId(loaded[0].id);
+    });
+  }, [userId]);
 
   const handleSetActiveTab = useCallback((tab: TabName) => setActiveTab(tab), []);
   const selectReel = useCallback((id: string) => setSelectedReelId(id), []);
@@ -92,7 +92,8 @@ export function RootsProvider({
   const addReel = useCallback((reel: Reel) => {
     setReels((prev) => [reel, ...prev]);
     setSelectedReelId(reel.id);
-  }, []);
+    upsertReel(userId, reel);
+  }, [userId]);
 
   const scheduleReel = useCallback((reelId: string, date: string) => {
     setReels((prev) => {

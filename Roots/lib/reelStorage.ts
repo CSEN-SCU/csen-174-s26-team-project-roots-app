@@ -1,16 +1,21 @@
+import { getSupabaseClient } from "./supabase";
 import type { Reel } from "./types";
 
-const key = (userId: string) => `roots_reels_${userId}`;
-
-export function loadReels(userId: string): Reel[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(localStorage.getItem(key(userId)) ?? "[]") as Reel[];
-  } catch {
-    return [];
-  }
+export async function loadReels(userId: string): Promise<Reel[]> {
+  const { data, error } = await getSupabaseClient()
+    .from("reels")
+    .select("data")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => row.data as unknown as Reel);
 }
 
-export function saveReels(userId: string, reels: Reel[]): void {
-  localStorage.setItem(key(userId), JSON.stringify(reels));
+export async function upsertReel(userId: string, reel: Reel): Promise<void> {
+  await getSupabaseClient().from("reels").upsert({
+    id: reel.id,
+    user_id: userId,
+    data: reel,
+    created_at: reel.createdAt,
+  });
 }
