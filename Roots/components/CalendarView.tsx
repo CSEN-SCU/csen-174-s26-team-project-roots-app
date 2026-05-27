@@ -46,7 +46,7 @@ function getEventSegments(reelId: string | undefined, reels: Reel[], fallbackTit
           isTravel: true,
         });
       }
-      segs.push({ label: stop.name, durationMin: DEFAULT_STOP_MIN, isTravel: false });
+      segs.push({ label: stop.name, durationMin: stop.dwellMinutes ?? DEFAULT_STOP_MIN, isTravel: false });
     }
     return segs;
   }

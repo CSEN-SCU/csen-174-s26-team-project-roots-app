@@ -137,6 +137,13 @@ export function StopEditor({
             onChange={(e) => field("hours", e.target.value)} />
         </div>
         <div>
+          <label className="field-label">Time at stop (min)</label>
+          <input className="field-input" type="number" min={1}
+            value={draft.dwellMinutes ?? ""}
+            placeholder="30"
+            onChange={(e) => field("dwellMinutes", e.target.value ? Number(e.target.value) : undefined)} />
+        </div>
+        <div>
           <label className="field-label">Travel from prev (min)</label>
           <input className="field-input" type="number" min={0}
             value={draft.travelMinutesFromPrev ?? ""}
@@ -260,6 +267,23 @@ export function InlinePlanEditor({
     setEditingStepId(null);
   }
 
+  function addStop() {
+    if (!reel) return;
+    const newStop: Stop = {
+      id: `s${Date.now()}`,
+      name: "New stop",
+      category: "",
+      address: "",
+      lat: 0,
+      lng: 0,
+      hours: "Hours vary",
+      dwellMinutes: 30,
+    };
+    const stops = [...(reel.roadmap.stops ?? []), newStop];
+    updateReel(reel.id, { ...reel, roadmap: { ...reel.roadmap, stops } });
+    setEditingStopId(newStop.id);
+  }
+
   if (reel.roadmap.kind === "route" && reel.roadmap.stops) {
     return (
       <div className="space-y-1">
@@ -277,11 +301,12 @@ export function InlinePlanEditor({
               </span>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-ink truncate">{s.name}</div>
-                {s.travelMinutesFromPrev && (
-                  <div className="text-[10px] text-ink/40">
-                    {TRAVEL_ICON[s.travelMode ?? "drive"]} {s.travelMinutesFromPrev} min
-                  </div>
-                )}
+                <div className="text-[10px] text-ink/40 flex gap-2">
+                  {s.travelMinutesFromPrev && (
+                    <span>{TRAVEL_ICON[s.travelMode ?? "drive"]} {s.travelMinutesFromPrev} min travel</span>
+                  )}
+                  {s.dwellMinutes && <span>⏱ {s.dwellMinutes} min at stop</span>}
+                </div>
               </div>
               <span className="text-ink/20 text-xs group-hover:text-moss-500 transition-colors">✏️</span>
             </div>
@@ -290,6 +315,12 @@ export function InlinePlanEditor({
             )}
           </div>
         ))}
+        <button
+          onClick={addStop}
+          className="mt-2 w-full rounded-xl border border-dashed border-moss-200 text-moss-600 text-sm py-2 hover:bg-moss-50 transition-colors flex items-center justify-center gap-1.5"
+        >
+          <span className="text-base leading-none">+</span> Add stop
+        </button>
       </div>
     );
   }

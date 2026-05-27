@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRoots } from "@/lib/store";
 import { MapViewClient } from "./MapViewClient";
 import { StopEditor, StepEditor } from "./PlanEditorParts";
-import type { Reel, Stop, ProjectStep } from "@/lib/types";
+import type { Reel, Stop, ProjectStep, Roadmap } from "@/lib/types";
 
 const TRAVEL_ICON: Record<string, string> = {
   walk: "🚶",
@@ -55,16 +55,33 @@ function RoadmapCard({ reel, onSchedule }: { reel: Reel; onSchedule: () => void 
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
 
+  function updateRoadmap(patch: Partial<Roadmap>) {
+    updateReel(reel.id, { ...reel, roadmap: { ...reel.roadmap, ...patch } });
+  }
+
   function saveStop(updated: Stop) {
-    const stops = reel.roadmap.stops!.map((s) => (s.id === updated.id ? updated : s));
-    updateReel(reel.id, { ...reel, roadmap: { ...reel.roadmap, stops } });
+    updateRoadmap({ stops: reel.roadmap.stops!.map((s) => (s.id === updated.id ? updated : s)) });
     setEditingStopId(null);
   }
 
   function saveStep(updated: ProjectStep) {
-    const steps = reel.roadmap.steps!.map((s) => (s.id === updated.id ? updated : s));
-    updateReel(reel.id, { ...reel, roadmap: { ...reel.roadmap, steps } });
+    updateRoadmap({ steps: reel.roadmap.steps!.map((s) => (s.id === updated.id ? updated : s)) });
     setEditingStepId(null);
+  }
+
+  function addStop() {
+    const newStop: Stop = {
+      id: `s${Date.now()}`,
+      name: "New stop",
+      category: "",
+      address: "",
+      lat: 0,
+      lng: 0,
+      hours: "Hours vary",
+      dwellMinutes: 30,
+    };
+    updateRoadmap({ stops: [...(reel.roadmap.stops ?? []), newStop] });
+    setEditingStopId(newStop.id);
   }
 
   return (
@@ -125,11 +142,16 @@ function RoadmapCard({ reel, onSchedule }: { reel: Reel; onSchedule: () => void 
                         💡 {s.note}
                       </div>
                     )}
-                    {s.travelMinutesFromPrev && (
-                      <div className="text-[11px] text-ink/45 mt-1.5">
-                        {TRAVEL_ICON[s.travelMode ?? "drive"]} {s.travelMinutesFromPrev} min from previous stop
-                      </div>
-                    )}
+                    <div className="flex flex-wrap gap-3 mt-1.5">
+                      {s.travelMinutesFromPrev && (
+                        <span className="text-[11px] text-ink/45">
+                          {TRAVEL_ICON[s.travelMode ?? "drive"]} {s.travelMinutesFromPrev} min travel
+                        </span>
+                      )}
+                      {s.dwellMinutes && (
+                        <span className="text-[11px] text-ink/45">⏱ {s.dwellMinutes} min at stop</span>
+                      )}
+                    </div>
                   </div>
                   <span className="text-ink/25 text-xs group-hover:text-moss-500 transition-colors pt-1 shrink-0">✏️</span>
                 </div>
@@ -139,6 +161,12 @@ function RoadmapCard({ reel, onSchedule }: { reel: Reel; onSchedule: () => void 
               </li>
             ))}
           </ol>
+          <button
+            onClick={addStop}
+            className="mt-3 w-full rounded-2xl border border-dashed border-moss-200 text-moss-600 text-sm py-2.5 hover:bg-moss-50 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <span className="text-base leading-none">+</span> Add stop
+          </button>
         </>
       )}
 
@@ -220,7 +248,15 @@ function ExtractionCard({ reel }: { reel: Reel; scheduledIds: (string | undefine
           <span className="text-[10px] uppercase tracking-wider bg-white/15 rounded-full px-2 py-0.5">
             {reel.platform} · {reel.creator}
           </span>
-          <span className="text-[10px] opacity-70">▶ Source reel</span>
+          <a
+            href={reel.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] opacity-70 hover:opacity-100 underline underline-offset-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            ▶ Source reel
+          </a>
         </div>
         <p className="mt-3 leading-snug">&ldquo;{reel.caption}&rdquo;</p>
       </div>

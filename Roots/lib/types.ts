@@ -19,6 +19,7 @@ export interface Stop {
   hours: string;
   travelMinutesFromPrev?: number;
   travelMode?: "walk" | "drive" | "transit" | "bike";
+  dwellMinutes?: number;
   note?: string;
 }
 
