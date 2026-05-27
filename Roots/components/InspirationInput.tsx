@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRoots } from "@/lib/store";
 import type { ExtractionStage } from "@/lib/types";
 
@@ -41,6 +41,30 @@ export function InspirationInput() {
   const [activeStageIdx, setActiveStageIdx] = useState(-1);
   const [extractError, setExtractError] = useState<string | null>(null);
 
+  // ── User location ─────────────────────────────────────────────────────────
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationLabel, setLocationLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setUserCoords({ lat, lng });
+        // Reverse-geocode for the display label
+        try {
+          const res = await fetch(`/api/places?lat=${lat}&lng=${lng}`);
+          const data = await res.json();
+          if (data.city) setLocationLabel(data.city);
+        } catch {
+          // Display nothing if reverse geocode fails — coords are still sent
+        }
+      },
+      () => { /* permission denied or unavailable — silent */ },
+      { timeout: 8000, maximumAge: 300_000 }
+    );
+  }, []);
+
   function handleUrlChange(value: string) {
     setUrl(value);
     if (urlError) setUrlError(null);
@@ -71,7 +95,10 @@ export function InspirationInput() {
       const res = await fetch("/api/extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: extractUrl }),
+        body: JSON.stringify({
+          url: extractUrl,
+          ...(userCoords ?? {}),
+        }),
       });
 
       clearInterval(timer);
@@ -163,6 +190,25 @@ export function InspirationInput() {
             </>
           )}
         </button>
+      </div>
+
+      {/* Location indicator */}
+      <div className="mt-2 flex items-center gap-1.5 text-xs text-ink/50">
+        {userCoords ? (
+          <>
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-moss-400" />
+            <span>
+              {locationLabel
+                ? `Using your location · ${locationLabel}`
+                : "Location acquired · personalizing nearby places"}
+            </span>
+          </>
+        ) : (
+          <>
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-ink/20" />
+            <span>No location · plans will use content&apos;s location</span>
+          </>
+        )}
       </div>
 
       {/* URL validation error */}

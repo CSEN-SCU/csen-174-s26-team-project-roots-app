@@ -55,7 +55,7 @@ You MUST output a single raw JSON object with this exact structure. No markdown 
     "kind": "route" | "project",
     "title": string,           // Catchy 3-6 word plan title
     "summary": string,         // One sentence describing what this plan involves
-    "durationLabel": string,   // Human-friendly like "Saturday · 9:00 AM – 3:00 PM" or "2 sessions · ~4 hours hands-on"
+    "durationLabel": string,   // Human-friendly and accurate to the actual activity length. Short: "~45 min", "~1.5 hours". Multi-stop: "Saturday · 10:00 AM – 1:00 PM". Multi-session project: "2 sessions · ~4 hours hands-on". Never stretch a short activity into a full-day label.
     "scheduledFor": string,    // ISO 8601 datetime — next Saturday at 10:00 AM if unspecified
     "stops": [                 // ONLY for kind="route"
       {
@@ -85,7 +85,7 @@ You MUST output a single raw JSON object with this exact structure. No markdown 
 
 ## Rules for roadmap kind
 
-Classify as "route" when the content involves visiting one or more physical, real-world locations — a park, trail, neighborhood, shop, restaurant, museum, beach, market, or any place you drive/walk/transit to. Even if only one destination is mentioned, expand it into a practical multi-stop route with coffee, parking, food stops as appropriate.
+Classify as "route" when the content involves visiting one or more physical, real-world locations — a park, trail, neighborhood, shop, restaurant, museum, beach, market, or any place you drive/walk/transit to. The number of stops must match the actual activity — do not inflate short outings into all-day plans.
 
 Classify as "project" when the content teaches a skill, craft, recipe, DIY technique, workout, or creative activity that happens primarily at home, in a studio, or at a workbench. Ceramics tutorials, bread baking, oil painting, yoga flows, woodworking, home repair — these are all "project".
 
@@ -93,11 +93,16 @@ When in doubt and any real-world location is named, default to "route".
 
 ## Rules for route stops
 
-Every route must have at least 2 stops and ideally 3–5. Build a logical, enjoyable itinerary:
-- For morning outings: add a coffee stop at the start if none is mentioned
-- For day trips: add a meal stop (lunch/brunch) on the return
-- For shopping routes: include start and end anchors (transit stop, parking, nearby café)
-- For nature/hiking: trailhead + optional post-hike meal
+Stop count must be driven by the actual activity, not padded to hit a minimum:
+- A single-destination visit (one café, one museum, one trailhead) can be just 1–2 stops.
+- A half-day outing might have 2–3 stops. A full-day trip might have 4–5.
+- Never add stops just to fill time. Every stop must be directly relevant to the content.
+
+Only add supplementary stops when they naturally fit the activity and time frame:
+- Coffee: only if the outing is 2+ hours AND coffee genuinely fits the flow — never add it reflexively.
+- Meal: only if the activity genuinely spans a mealtime and nothing else in the plan covers food.
+- For nature/hiking: trailhead is the core stop; post-hike food is optional and only if the hike is 3+ hours.
+- For shopping/urban: only add transit or parking anchors if they're meaningfully useful, not to pad count.
 
 Address quality matters — write addresses specific enough to geocode. Include number + street + city + state (e.g. "8515 Croy Rd, Morgan Hill, CA"). If you don't know the exact address, use the known intersection or neighborhood (e.g. "Piedmont Ave and 41st St, Oakland, CA").
 
@@ -145,7 +150,16 @@ If the URL clearly looks like a demo, test, or fictional URL (contains "demo", "
 
 ## scheduledFor
 
-Default to next Saturday at 10:00 AM. Today's reference date is 2026-04-22, so the next Saturday is 2026-04-25. Use that unless the content implies a specific date or time. Format: "2026-04-25T10:00:00". For projects with multiple sessions, use the start of the first session.
+Default to next Saturday at 10:00 AM. The exact dates will be provided in the user message — use those, not a hardcoded date. Format: ISO 8601 like "2026-05-31T10:00:00". For projects with multiple sessions, use the start of the first session.
+
+## Using the user's location
+
+The user message may include a "User location" line. Use it as follows:
+
+- When the content references a **specific real-world place** (a named park, restaurant, city), ignore the user location for stop selection — the content's location takes priority.
+- When the content is **generic or location-agnostic** (e.g., "thrifting tips", "best coffee shops", "morning routine", "ceramic tutorial" with no named place), use the user's location to choose real, nearby venues. Pick actual business names, real addresses, and correct geocodeable locations in that city.
+- Set locationGuess to the user's city when no specific location can be inferred from the content itself.
+- Never fabricate places. If you don't know specific venues in that city, use well-known chains or clearly label it "Recommended — verify before visiting".
 
 ## Quality bar
 
@@ -250,6 +264,8 @@ export async function POST(req: NextRequest) {
     if (!url || typeof url !== "string") {
       return NextResponse.json({ error: "url is required" }, { status: 400 });
     }
+    const userLat: number | undefined = typeof body?.lat === "number" ? body.lat : undefined;
+    const userLng: number | undefined = typeof body?.lng === "number" ? body.lng : undefined;
 
     const platform = /tiktok/i.test(url)
       ? "tiktok"
@@ -261,11 +277,44 @@ export async function POST(req: NextRequest) {
 
     const meta = await fetchPlatformMeta(url);
 
+    // Reverse-geocode user coordinates to a readable city string
+    let userLocationStr = "unknown";
+    if (userLat !== undefined && userLng !== undefined) {
+      try {
+        const revRes = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${userLat}&lon=${userLng}&format=json&zoom=10&addressdetails=1`,
+          {
+            headers: { "User-Agent": "Roots-App/1.0 (roots-planning-app)" },
+            signal: AbortSignal.timeout(5000),
+          }
+        );
+        if (revRes.ok) {
+          const revData = await revRes.json();
+          const a = revData.address ?? {};
+          const city = a.city ?? a.town ?? a.village ?? a.municipality ?? a.county ?? "";
+          const state = a.state ?? "";
+          userLocationStr = [city, state].filter(Boolean).join(", ") || "unknown";
+        }
+      } catch {
+        // Fall through — location stays "unknown"
+      }
+    }
+
+    // Compute dynamic date values
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const daysUntilSat = (6 - now.getDay() + 7) % 7 || 7;
+    const nextSat = new Date(now);
+    nextSat.setDate(now.getDate() + daysUntilSat);
+    const nextSatStr = nextSat.toISOString().split("T")[0];
+
     const userMessage = `Platform: ${platform}
 URL: ${url}
 Creator: ${meta.creator}
 Title: ${meta.title || "(not available — infer from URL)"}
 Caption/Description: ${meta.description || "(not available — infer from URL path and platform)"}
+Today's date: ${todayStr} (next Saturday: ${nextSatStr})
+User location: ${userLocationStr}
 
 Extract a complete plan from this social media content and return it as raw JSON matching the schema in your instructions.`;
 

@@ -2,11 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRoots } from "@/lib/store";
+import type { CalendarEvent } from "@/lib/store";
+import type { Reel } from "@/lib/types";
 
 type ViewMode = "day" | "week" | "month";
 
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7 AM – 9 PM
+const HOURS = Array.from({ length: 24 }, (_, i) => i); // 12 AM – 11 PM
 const HOUR_H = 56; // px per hour row
+const PX_PER_MIN = HOUR_H / 60;
+const DEFAULT_STOP_MIN = 30; // assumed dwell time per route stop when not specified
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS_LONG = [
   "January", "February", "March", "April", "May", "June",
@@ -14,6 +18,50 @@ const MONTHS_LONG = [
 ];
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// ── Segment types ───────────────────────────────────────────────────────────
+type Segment = { label: string; durationMin: number; isTravel: boolean };
+
+function getEventSegments(reelId: string | undefined, reels: Reel[], fallbackTitle: string): Segment[] {
+  const reel = reelId ? reels.find((r) => r.id === reelId) : undefined;
+  if (!reel) return [{ label: fallbackTitle, durationMin: 60, isTravel: false }];
+
+  const { roadmap } = reel;
+
+  if (roadmap.kind === "project" && roadmap.steps?.length) {
+    return roadmap.steps.map((step) => ({
+      label: step.title,
+      durationMin: step.durationMin,
+      isTravel: false,
+    }));
+  }
+
+  if (roadmap.kind === "route" && roadmap.stops?.length) {
+    const segs: Segment[] = [];
+    for (const stop of roadmap.stops) {
+      if ((stop.travelMinutesFromPrev ?? 0) > 0) {
+        segs.push({
+          label: `Travel → ${stop.name}`,
+          durationMin: stop.travelMinutesFromPrev!,
+          isTravel: true,
+        });
+      }
+      segs.push({ label: stop.name, durationMin: DEFAULT_STOP_MIN, isTravel: false });
+    }
+    return segs;
+  }
+
+  return [{ label: roadmap.title, durationMin: 60, isTravel: false }];
+}
+
+function segmentsTotalMin(segs: Segment[]): number {
+  return segs.reduce((sum, s) => sum + s.durationMin, 0);
+}
+
+function reelDurationMin(reelId: string | undefined, reels: Reel[]): number {
+  return segmentsTotalMin(getEventSegments(reelId, reels, ""));
+}
+
+// ── Date / time helpers ─────────────────────────────────────────────────────
 function getWeekStart(d: Date): Date {
   const c = new Date(d);
   c.setDate(c.getDate() - c.getDay());
@@ -33,8 +81,10 @@ function isoDateKey(iso: string): string {
   return localDateKey(new Date(iso));
 }
 
-function isoHour(iso: string): number {
-  return new Date(iso).getHours();
+/** Returns total minutes from midnight for an ISO timestamp. */
+function isoMinutesFromMidnight(iso: string): number {
+  const d = new Date(iso);
+  return d.getHours() * 60 + d.getMinutes();
 }
 
 function makeISO(key: string, hour: number): string {
@@ -53,7 +103,8 @@ function fmtTime(iso: string): string {
 }
 
 export function CalendarView() {
-  const { calendar, pendingSchedule, scheduleReel, setPendingSchedule } = useRoots();
+  const { calendar, pendingSchedule, scheduleReel, setPendingSchedule, reels,
+          updateCalendarEvent, deleteCalendarEvent } = useRoots();
   const today = new Date();
   const todayKey = localDateKey(today);
 
@@ -65,9 +116,43 @@ export function CalendarView() {
   const [hoverSlot, setHoverSlot] = useState<{ key: string; hour: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // ── Event editing modal ──────────────────────────────────────────────────
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+
+  useEffect(() => {
+    if (!editingEvent) return;
+    const d = new Date(editingEvent.startsAt);
+    setEditTitle(editingEvent.title);
+    setEditDate(localDateKey(d));
+    setEditTime(
+      `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+    );
+  }, [editingEvent]);
+
+  function handleSaveEvent() {
+    if (!editingEvent) return;
+    const [h, m] = editTime.split(":").map(Number);
+    const [y, mo, day] = editDate.split("-").map(Number);
+    const newDate = new Date(y, mo - 1, day, h, m, 0);
+    updateCalendarEvent(editingEvent.id, {
+      title: editTitle,
+      startsAt: newDate.toISOString(),
+    });
+    setEditingEvent(null);
+  }
+
+  function handleDeleteEvent() {
+    if (!editingEvent) return;
+    deleteCalendarEvent(editingEvent.id);
+    setEditingEvent(null);
+  }
+
   // Scroll to 8 AM on first render
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: HOUR_H, behavior: "instant" as ScrollBehavior });
+    scrollRef.current?.scrollTo({ top: 8 * HOUR_H, behavior: "instant" as ScrollBehavior });
   }, []);
 
   // When placement starts: jump to the suggested date and switch to week view
@@ -78,15 +163,21 @@ export function CalendarView() {
     setDayDate(d);
     setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
     if (viewMode === "month") setViewMode("week");
-    const sugH = isoHour(pendingSchedule.suggestedDate);
-    const scrollTop = Math.max(0, (sugH - 7 - 1)) * HOUR_H;
+    const sugH = new Date(pendingSchedule.suggestedDate).getHours();
+    const scrollTop = Math.max(0, sugH - 1) * HOUR_H;
     setTimeout(() => scrollRef.current?.scrollTo({ top: scrollTop, behavior: "smooth" }), 80);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingSchedule]);
 
   const placing = !!pendingSchedule;
   const sugKey = pendingSchedule ? isoDateKey(pendingSchedule.suggestedDate) : null;
-  const sugHour = pendingSchedule ? isoHour(pendingSchedule.suggestedDate) : null;
+  const sugHour = pendingSchedule ? new Date(pendingSchedule.suggestedDate).getHours() : null;
+
+  // Precompute pending event duration for ghost blocks
+  const pendingDurationMin = pendingSchedule
+    ? reelDurationMin(pendingSchedule.reelId, reels)
+    : 60;
+  const pendingHeightPx = pendingDurationMin * PX_PER_MIN;
 
   const eventsByDate = calendar.reduce<Record<string, typeof calendar>>((acc, evt) => {
     const k = isoDateKey(evt.startsAt);
@@ -190,10 +281,10 @@ export function CalendarView() {
                 })}
 
                 {/* Suggested placement ghost */}
-                {placing && isSugDay && sugHour !== null && HOURS.includes(sugHour) && (
+                {placing && isSugDay && sugHour !== null && (
                   <div
-                    className="absolute left-0.5 right-0.5 rounded-lg border-2 border-dashed border-moss-500 bg-moss-100 px-2 py-1 pointer-events-none z-20"
-                    style={{ top: (sugHour - 7) * HOUR_H + 2, height: HOUR_H - 4 }}
+                    className="absolute left-0.5 right-0.5 rounded-lg border-2 border-dashed border-moss-500 bg-moss-100 px-2 py-1 pointer-events-none z-20 overflow-hidden"
+                    style={{ top: sugHour * HOUR_H + 2, height: Math.max(pendingHeightPx - 4, 20) }}
                   >
                     <div className="text-[10px] font-semibold text-moss-700 truncate">★ {pendingSchedule!.title}</div>
                     <div className="text-[9px] text-moss-600 mt-0.5">{fmtHour(sugHour)} · suggested</div>
@@ -201,28 +292,55 @@ export function CalendarView() {
                 )}
 
                 {/* Hover ghost (different from suggested) */}
-                {placing && hoverSlot?.key === key && hoverSlot.hour !== sugHour && HOURS.includes(hoverSlot.hour) && (
+                {placing && hoverSlot?.key === key && hoverSlot.hour !== sugHour && (
                   <div
-                    className="absolute left-0.5 right-0.5 rounded-lg border border-moss-400 bg-moss-200/70 px-2 py-1 pointer-events-none z-20"
-                    style={{ top: (hoverSlot.hour - 7) * HOUR_H + 2, height: HOUR_H - 4 }}
+                    className="absolute left-0.5 right-0.5 rounded-lg border border-moss-400 bg-moss-200/70 px-2 py-1 pointer-events-none z-20 overflow-hidden"
+                    style={{ top: hoverSlot.hour * HOUR_H + 2, height: Math.max(pendingHeightPx - 4, 20) }}
                   >
                     <div className="text-[10px] font-semibold text-moss-800 truncate">+ {pendingSchedule!.title}</div>
                     <div className="text-[9px] text-moss-700 mt-0.5">{fmtHour(hoverSlot.hour)}</div>
                   </div>
                 )}
 
-                {/* Real events */}
+                {/* Real events — rendered as stacked segments */}
                 {dayEvts.map((evt) => {
-                  const h = isoHour(evt.startsAt);
-                  if (!HOURS.includes(h)) return null;
+                  const startMin = isoMinutesFromMidnight(evt.startsAt);
+                  const segments = getEventSegments(evt.reelId, reels, evt.title);
+                  const totalMin = segmentsTotalMin(segments);
+                  const topPx = startMin * PX_PER_MIN;
+                  const totalHeightPx = totalMin * PX_PER_MIN;
+
                   return (
                     <div
                       key={evt.id}
-                      className="absolute left-0.5 right-0.5 rounded-lg bg-moss-500 px-2 py-1 z-10"
-                      style={{ top: (h - 7) * HOUR_H + 2, height: HOUR_H - 4 }}
+                      className="absolute left-0.5 right-0.5 rounded-lg overflow-hidden z-10 cursor-pointer ring-0 hover:ring-2 hover:ring-white/80 transition-shadow"
+                      style={{ top: topPx + 2, height: Math.max(totalHeightPx - 4, 16) }}
+                      onClick={(e) => { e.stopPropagation(); setEditingEvent(evt); }}
                     >
-                      <div className="text-[10px] font-semibold text-white truncate">{evt.title}</div>
-                      <div className="text-[9px] text-white/70 mt-0.5">{fmtTime(evt.startsAt)}</div>
+                      {segments.map((seg, idx) => {
+                        const segH = Math.max(seg.durationMin * PX_PER_MIN, 0);
+                        return (
+                          <div
+                            key={idx}
+                            className={[
+                              "px-2 py-0.5 flex flex-col justify-start",
+                              seg.isTravel
+                                ? "bg-amber-400 border-b border-amber-300"
+                                : idx % 2 === 0
+                                  ? "bg-moss-500 border-b border-moss-400"
+                                  : "bg-moss-600 border-b border-moss-500",
+                            ].join(" ")}
+                            style={{ height: segH, minHeight: 0, overflow: "hidden" }}
+                          >
+                            <div className="text-[10px] font-semibold text-white truncate leading-tight">{seg.label}</div>
+                            {segH >= 20 && (
+                              <div className="text-[9px] text-white/70 truncate leading-tight">
+                                {seg.isTravel ? `${seg.durationMin} min` : `${seg.durationMin} min`}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
@@ -424,6 +542,85 @@ export function CalendarView() {
       {viewMode === "week" && renderTimeGrid(weekDayKeys)}
       {viewMode === "day" && renderTimeGrid([currentDayKey])}
       {viewMode === "month" && renderMonthView()}
+
+      {/* ── Event edit modal ──────────────────────────────────────────── */}
+      {editingEvent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm"
+          onClick={() => setEditingEvent(null)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-xl w-full max-w-sm mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-moss-500 px-5 py-4 flex items-center gap-3">
+              <input
+                className="flex-1 bg-transparent text-white placeholder-white/60 font-display text-xl outline-none border-b border-white/30 pb-0.5"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Event title"
+              />
+              <button
+                onClick={() => setEditingEvent(null)}
+                className="text-white/70 hover:text-white text-lg leading-none"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-5 space-y-4">
+              <div>
+                <label className="text-[11px] uppercase tracking-widest text-ink/45 font-semibold block mb-1.5">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  className="w-full rounded-xl border border-moss-100 bg-moss-50/40 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-moss-300"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-widest text-ink/45 font-semibold block mb-1.5">
+                  Start time
+                </label>
+                <input
+                  type="time"
+                  className="w-full rounded-xl border border-moss-100 bg-moss-50/40 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-moss-300"
+                  value={editTime}
+                  onChange={(e) => setEditTime(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 pb-5 flex items-center justify-between">
+              <button
+                onClick={handleDeleteEvent}
+                className="text-sm text-red-500 hover:text-red-600 font-medium"
+              >
+                Remove
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setEditingEvent(null)}
+                  className="rounded-xl px-4 py-2 text-sm border border-moss-100 text-ink/60 hover:bg-moss-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEvent}
+                  className="rounded-xl px-4 py-2 text-sm font-medium bg-moss-500 text-white hover:bg-moss-600"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

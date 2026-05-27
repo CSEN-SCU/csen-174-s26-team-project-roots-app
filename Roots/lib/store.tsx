@@ -20,7 +20,7 @@ import type {
   Reel,
 } from "./types";
 
-interface CalendarEvent {
+export interface CalendarEvent {
   id: string;
   title: string;
   startsAt: string;
@@ -52,6 +52,9 @@ interface RootsState {
   selectReel: (id: string) => void;
   addReel: (reel: Reel) => void;
   scheduleReel: (reelId: string, date: string) => void;
+  updateCalendarEvent: (id: string, patch: { title?: string; startsAt?: string }) => void;
+  deleteCalendarEvent: (id: string) => void;
+  updateReel: (reelId: string, updated: Reel) => void;
   setPendingSchedule: (p: PendingSchedule | null) => void;
   castVote: (proposalId: string, memberId: string, vote: "yes" | "no") => void;
   retractVote: (proposalId: string, memberId: string) => void;
@@ -115,6 +118,25 @@ export function RootsProvider({
       return prev;
     });
   }, []);
+
+  const updateCalendarEvent = useCallback(
+    (id: string, patch: { title?: string; startsAt?: string }) => {
+      setCalendar((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    },
+    []
+  );
+
+  const deleteCalendarEvent = useCallback((id: string) => {
+    setCalendar((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
+  const updateReel = useCallback(
+    (reelId: string, updated: Reel) => {
+      setReels((prev) => prev.map((r) => (r.id === reelId ? updated : r)));
+      upsertReel(userId, updated);
+    },
+    [userId]
+  );
 
   const castVote = useCallback(
     (proposalId: string, memberId: string, vote: "yes" | "no") => {
@@ -188,6 +210,9 @@ export function RootsProvider({
       selectReel,
       addReel,
       scheduleReel,
+      updateCalendarEvent,
+      deleteCalendarEvent,
+      updateReel,
       setPendingSchedule,
       castVote,
       retractVote,
@@ -207,6 +232,9 @@ export function RootsProvider({
       selectReel,
       addReel,
       scheduleReel,
+      updateCalendarEvent,
+      deleteCalendarEvent,
+      updateReel,
       setPendingSchedule,
       castVote,
       retractVote,
