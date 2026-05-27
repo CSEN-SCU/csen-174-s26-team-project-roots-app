@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRoots } from "@/lib/store";
 import type { CalendarEvent } from "@/lib/store";
 import type { Reel } from "@/lib/types";
+import { InlinePlanEditor } from "./PlanEditorParts";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -546,74 +547,74 @@ export function CalendarView() {
       {/* ── Event edit modal ──────────────────────────────────────────── */}
       {editingEvent && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm p-4"
           onClick={() => setEditingEvent(null)}
         >
           <div
-            className="bg-white rounded-3xl shadow-xl w-full max-w-sm mx-4 overflow-hidden"
+            className="bg-white rounded-3xl shadow-xl w-full max-w-lg flex flex-col overflow-hidden"
+            style={{ maxHeight: "90vh" }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-moss-500 px-5 py-4 flex items-center gap-3">
+            <div className="bg-moss-500 px-5 py-4 flex items-center gap-3 shrink-0">
               <input
                 className="flex-1 bg-transparent text-white placeholder-white/60 font-display text-xl outline-none border-b border-white/30 pb-0.5"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
                 placeholder="Event title"
               />
-              <button
-                onClick={() => setEditingEvent(null)}
-                className="text-white/70 hover:text-white text-lg leading-none"
-              >
+              <button onClick={() => setEditingEvent(null)} className="text-white/70 hover:text-white text-lg leading-none">
                 ✕
               </button>
             </div>
 
-            {/* Body */}
-            <div className="px-5 py-5 space-y-4">
-              <div>
-                <label className="text-[11px] uppercase tracking-widest text-ink/45 font-semibold block mb-1.5">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  className="w-full rounded-xl border border-moss-100 bg-moss-50/40 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-moss-300"
-                  value={editDate}
-                  onChange={(e) => setEditDate(e.target.value)}
-                />
+            {/* Scrollable body */}
+            <div className="overflow-y-auto flex-1">
+              {/* When section */}
+              <div className="px-5 py-5 space-y-4 border-b border-moss-50">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] uppercase tracking-widest text-ink/45 font-semibold block mb-1.5">Date</label>
+                    <input
+                      type="date"
+                      className="w-full rounded-xl border border-moss-100 bg-moss-50/40 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-moss-300"
+                      value={editDate}
+                      onChange={(e) => setEditDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] uppercase tracking-widest text-ink/45 font-semibold block mb-1.5">Start time</label>
+                    <input
+                      type="time"
+                      className="w-full rounded-xl border border-moss-100 bg-moss-50/40 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-moss-300"
+                      value={editTime}
+                      onChange={(e) => setEditTime(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-[11px] uppercase tracking-widest text-ink/45 font-semibold block mb-1.5">
-                  Start time
-                </label>
-                <input
-                  type="time"
-                  className="w-full rounded-xl border border-moss-100 bg-moss-50/40 px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-moss-300"
-                  value={editTime}
-                  onChange={(e) => setEditTime(e.target.value)}
-                />
-              </div>
+
+              {/* Plan section — only for reel-backed events */}
+              {editingEvent.reelId && (
+                <div className="px-5 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-moss-600 mb-3">
+                    Edit plan
+                  </p>
+                  <InlinePlanEditor reelId={editingEvent.reelId} />
+                </div>
+              )}
             </div>
 
             {/* Footer */}
-            <div className="px-5 pb-5 flex items-center justify-between">
-              <button
-                onClick={handleDeleteEvent}
-                className="text-sm text-red-500 hover:text-red-600 font-medium"
-              >
-                Remove
+            <div className="px-5 py-4 border-t border-moss-50 flex items-center justify-between shrink-0">
+              <button onClick={handleDeleteEvent} className="text-sm text-red-500 hover:text-red-600 font-medium">
+                Remove event
               </button>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setEditingEvent(null)}
-                  className="rounded-xl px-4 py-2 text-sm border border-moss-100 text-ink/60 hover:bg-moss-50"
-                >
+                <button onClick={() => setEditingEvent(null)} className="rounded-xl px-4 py-2 text-sm border border-moss-100 text-ink/60 hover:bg-moss-50">
                   Cancel
                 </button>
-                <button
-                  onClick={handleSaveEvent}
-                  className="rounded-xl px-4 py-2 text-sm font-medium bg-moss-500 text-white hover:bg-moss-600"
-                >
+                <button onClick={handleSaveEvent} className="rounded-xl px-4 py-2 text-sm font-medium bg-moss-500 text-white hover:bg-moss-600">
                   Save
                 </button>
               </div>

@@ -55,6 +55,8 @@ interface RootsState {
   updateCalendarEvent: (id: string, patch: { title?: string; startsAt?: string }) => void;
   deleteCalendarEvent: (id: string) => void;
   updateReel: (reelId: string, updated: Reel) => void;
+  userCoords: { lat: number; lng: number } | null;
+  setUserCoords: (coords: { lat: number; lng: number } | null) => void;
   setPendingSchedule: (p: PendingSchedule | null) => void;
   castVote: (proposalId: string, memberId: string, vote: "yes" | "no") => void;
   retractVote: (proposalId: string, memberId: string) => void;
@@ -79,6 +81,11 @@ export function RootsProvider({
   const [calendar, setCalendar] = useState<CalendarEvent[]>([]);
   const [activeTab, setActiveTab] = useState<TabName>("schedule");
   const [pendingSchedule, setPendingScheduleState] = useState<PendingSchedule | null>(null);
+  const [userCoords, setUserCoordsState] = useState<{ lat: number; lng: number } | null>(null);
+  const setUserCoords = useCallback(
+    (coords: { lat: number; lng: number } | null) => setUserCoordsState(coords),
+    []
+  );
   const activeUserId = userId;
 
   useEffect(() => {
@@ -213,6 +220,8 @@ export function RootsProvider({
       updateCalendarEvent,
       deleteCalendarEvent,
       updateReel,
+      userCoords,
+      setUserCoords,
       setPendingSchedule,
       castVote,
       retractVote,
@@ -235,6 +244,8 @@ export function RootsProvider({
       updateCalendarEvent,
       deleteCalendarEvent,
       updateReel,
+      userCoords,
+      setUserCoords,
       setPendingSchedule,
       castVote,
       retractVote,

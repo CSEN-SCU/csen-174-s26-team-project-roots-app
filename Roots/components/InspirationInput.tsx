@@ -34,15 +34,14 @@ function validateVideoUrl(raw: string): string | null {
 }
 
 export function InspirationInput() {
-  const { reels, addReel, selectReel, selectedReelId } = useRoots();
+  const { reels, addReel, selectReel, selectedReelId, userCoords, setUserCoords } = useRoots();
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
   const [stage, setStage] = useState<ExtractionStage>("idle");
   const [activeStageIdx, setActiveStageIdx] = useState(-1);
   const [extractError, setExtractError] = useState<string | null>(null);
 
-  // ── User location ─────────────────────────────────────────────────────────
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  // ── User location (stored globally so search components can use it) ────────
   const [locationLabel, setLocationLabel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -51,19 +50,18 @@ export function InspirationInput() {
       async (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setUserCoords({ lat, lng });
-        // Reverse-geocode for the display label
         try {
           const res = await fetch(`/api/places?lat=${lat}&lng=${lng}`);
           const data = await res.json();
           if (data.city) setLocationLabel(data.city);
         } catch {
-          // Display nothing if reverse geocode fails — coords are still sent
+          // Reverse-geocode failed — coords are still sent to extract
         }
       },
-      () => { /* permission denied or unavailable — silent */ },
+      () => { /* permission denied — silent */ },
       { timeout: 8000, maximumAge: 300_000 }
     );
-  }, []);
+  }, [setUserCoords]);
 
   function handleUrlChange(value: string) {
     setUrl(value);
