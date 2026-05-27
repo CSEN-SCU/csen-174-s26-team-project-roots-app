@@ -202,22 +202,41 @@ async function fetchPlatformMeta(url: string): Promise<{ title: string; creator:
   return fallback;
 }
 
-async function geocodeStop(stop: Stop): Promise<Stop> {
+async function nominatimSearch(q: string): Promise<{ lat: string; lon: string } | null> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(stop.address)}&format=json&limit=1`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`,
       {
         headers: { "User-Agent": "Roots-App/1.0 (roots-planning-app)" },
         signal: AbortSignal.timeout(6000),
       }
     );
-    if (!res.ok) return stop;
+    if (!res.ok) return null;
     const data = await res.json();
-    if (!data[0]) return stop;
-    return { ...stop, lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    return data[0] ?? null;
   } catch {
-    return stop;
+    return null;
   }
+}
+
+async function geocodeStop(stop: Stop): Promise<Stop> {
+  // 1. Try the full address string
+  const byAddress = await nominatimSearch(stop.address);
+  if (byAddress) {
+    return { ...stop, lat: parseFloat(byAddress.lat), lng: parseFloat(byAddress.lon) };
+  }
+
+  // 2. Wait to respect Nominatim's 1 req/sec policy, then try name + location context.
+  //    This is the key fallback for parks, trails, and trailheads whose street address
+  //    isn't in OSM — searching by place name usually succeeds.
+  await new Promise((r) => setTimeout(r, 1100));
+  const locationCtx = stop.address.split(",").slice(-2).join(",").trim();
+  const byName = await nominatimSearch(`${stop.name} ${locationCtx}`);
+  if (byName) {
+    return { ...stop, lat: parseFloat(byName.lat), lng: parseFloat(byName.lon) };
+  }
+
+  return stop; // couldn't geocode — lat/lng stays 0, map will filter it out
 }
 
 async function fetchWeather(lat: number, lng: number): Promise<Weather | null> {

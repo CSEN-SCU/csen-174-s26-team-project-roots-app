@@ -17,7 +17,7 @@ function makeIcon(idx: number) {
     html: `
       <div style="
         width: 30px; height: 30px; border-radius: 50% 50% 50% 0;
-        background: #3D7A36;
+        background: #1D6AE5;
         transform: rotate(-45deg);
         box-shadow: 0 4px 10px rgba(15,35,16,0.4);
         display:flex;align-items:center;justify-content:center;
@@ -79,7 +79,7 @@ interface Segment {
 function segmentStyle(mode?: string) {
   const isWalk = mode === "walk";
   return {
-    color: "#3D7A36",
+    color: "#1D6AE5",
     weight: isWalk ? 3 : 4,
     opacity: 0.85,
     dashArray: isWalk ? "6 8" : undefined,
@@ -149,7 +149,7 @@ export function MapView({ stops }: { stops: Stop[] }) {
         {routeLoading && geocoded.length > 1 && (
           <Polyline
             positions={fallbackPath}
-            pathOptions={{ color: "#3D7A36", weight: 2, opacity: 0.3, dashArray: "4 6" }}
+            pathOptions={{ color: "#1D6AE5", weight: 2, opacity: 0.3, dashArray: "4 6" }}
           />
         )}
 
