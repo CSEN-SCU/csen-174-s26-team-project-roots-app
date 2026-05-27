@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRoots } from "@/lib/store";
 import { MapViewClient } from "./MapViewClient";
 import { StopEditor, StepEditor } from "./PlanEditorParts";
@@ -54,6 +54,11 @@ function RoadmapCard({ reel, onSchedule }: { reel: Reel; onSchedule: () => void 
 
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
+  const [stopDragIdx, setStopDragIdx] = useState<number | null>(null);
+  const [stopOverIdx, setStopOverIdx] = useState<number | null>(null);
+  const [stepDragIdx, setStepDragIdx] = useState<number | null>(null);
+  const [stepOverIdx, setStepOverIdx] = useState<number | null>(null);
+  const canDragRef = useRef(false);
 
   function updateRoadmap(patch: Partial<Roadmap>) {
     updateReel(reel.id, { ...reel, roadmap: { ...reel.roadmap, ...patch } });
@@ -67,6 +72,22 @@ function RoadmapCard({ reel, onSchedule }: { reel: Reel; onSchedule: () => void 
   function saveStep(updated: ProjectStep) {
     updateRoadmap({ steps: reel.roadmap.steps!.map((s) => (s.id === updated.id ? updated : s)) });
     setEditingStepId(null);
+  }
+
+  function reorderStops(from: number, to: number) {
+    if (from === to) return;
+    const arr = [...(reel.roadmap.stops ?? [])];
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    updateRoadmap({ stops: arr });
+  }
+
+  function reorderSteps(from: number, to: number) {
+    if (from === to) return;
+    const arr = [...(reel.roadmap.steps ?? [])];
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    updateRoadmap({ steps: arr });
   }
 
   function addStop() {
@@ -118,11 +139,33 @@ function RoadmapCard({ reel, onSchedule }: { reel: Reel; onSchedule: () => void 
             {reel.roadmap.stops.map((s, i) => (
               <li key={s.id}>
                 <div
-                  className="flex gap-3 items-start group cursor-pointer rounded-2xl px-2 py-1.5 -mx-2 hover:bg-moss-50/60 transition-colors"
+                  draggable
+                  onDragStart={(e) => {
+                    if (!canDragRef.current) { e.preventDefault(); return; }
+                    setStopDragIdx(i);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => { e.preventDefault(); setStopOverIdx(i); }}
+                  onDragLeave={() => setStopOverIdx(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (stopDragIdx !== null) reorderStops(stopDragIdx, i);
+                    setStopDragIdx(null); setStopOverIdx(null); canDragRef.current = false;
+                  }}
+                  onDragEnd={() => { setStopDragIdx(null); setStopOverIdx(null); canDragRef.current = false; }}
                   onClick={() => setEditingStopId(editingStopId === s.id ? null : s.id)}
+                  className={[
+                    "flex gap-3 items-start group cursor-pointer rounded-2xl px-2 py-1.5 -mx-2 hover:bg-moss-50/60 transition-colors border-t-2",
+                    stopDragIdx === i ? "opacity-40" : "",
+                    stopOverIdx === i && stopDragIdx !== i ? "border-moss-500" : "border-transparent",
+                  ].join(" ")}
                 >
                   <div className="flex flex-col items-center pt-0.5 shrink-0">
-                    <span className="w-7 h-7 rounded-full bg-moss-500 text-white text-xs font-semibold flex items-center justify-center shadow-soft">
+                    <span
+                      className="w-7 h-7 rounded-full bg-moss-500 text-white text-xs font-semibold flex items-center justify-center shadow-soft cursor-grab active:cursor-grabbing select-none"
+                      onPointerDown={() => { canDragRef.current = true; }}
+                      onPointerUp={() => { canDragRef.current = false; }}
+                    >
                       {i + 1}
                     </span>
                     {i < reel.roadmap.stops!.length - 1 && (
@@ -176,12 +219,34 @@ function RoadmapCard({ reel, onSchedule }: { reel: Reel; onSchedule: () => void 
           {reel.roadmap.steps.map((s, i) => (
             <li key={s.id}>
               <div
-                className="rounded-2xl border border-moss-100 bg-white/70 p-4 group cursor-pointer hover:border-moss-200 hover:bg-moss-50/40 transition-colors"
+                draggable
+                onDragStart={(e) => {
+                  if (!canDragRef.current) { e.preventDefault(); return; }
+                  setStepDragIdx(i);
+                  e.dataTransfer.effectAllowed = "move";
+                }}
+                onDragOver={(e) => { e.preventDefault(); setStepOverIdx(i); }}
+                onDragLeave={() => setStepOverIdx(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (stepDragIdx !== null) reorderSteps(stepDragIdx, i);
+                  setStepDragIdx(null); setStepOverIdx(null); canDragRef.current = false;
+                }}
+                onDragEnd={() => { setStepDragIdx(null); setStepOverIdx(null); canDragRef.current = false; }}
                 onClick={() => setEditingStepId(editingStepId === s.id ? null : s.id)}
+                className={[
+                  "rounded-2xl border border-moss-100 bg-white/70 p-4 group cursor-pointer hover:border-moss-200 hover:bg-moss-50/40 transition-colors border-t-2",
+                  stepDragIdx === i ? "opacity-40" : "",
+                  stepOverIdx === i && stepDragIdx !== i ? "border-t-clay-500" : "",
+                ].join(" ")}
               >
                 <div className="flex items-baseline justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="w-7 h-7 rounded-full bg-clay-500 text-white text-xs font-semibold flex items-center justify-center shrink-0">
+                    <span
+                      className="w-7 h-7 rounded-full bg-clay-500 text-white text-xs font-semibold flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing select-none"
+                      onPointerDown={(e) => { e.stopPropagation(); canDragRef.current = true; }}
+                      onPointerUp={() => { canDragRef.current = false; }}
+                    >
                       {i + 1}
                     </span>
                     <span className="font-semibold text-ink">{s.title}</span>

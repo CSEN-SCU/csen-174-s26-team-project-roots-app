@@ -250,8 +250,29 @@ export function InlinePlanEditor({
   const reel = reels.find((r) => r.id === reelId);
   const [editingStopId, setEditingStopId] = useState<string | null>(null);
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
+  const [stopDragIdx, setStopDragIdx] = useState<number | null>(null);
+  const [stopOverIdx, setStopOverIdx] = useState<number | null>(null);
+  const [stepDragIdx, setStepDragIdx] = useState<number | null>(null);
+  const [stepOverIdx, setStepOverIdx] = useState<number | null>(null);
+  const canDragRef = useRef(false);
 
   if (!reel) return null;
+
+  function reorderStops(from: number, to: number) {
+    if (!reel || from === to) return;
+    const arr = [...(reel.roadmap.stops ?? [])];
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    updateReel(reel.id, { ...reel, roadmap: { ...reel.roadmap, stops: arr } });
+  }
+
+  function reorderSteps(from: number, to: number) {
+    if (!reel || from === to) return;
+    const arr = [...(reel.roadmap.steps ?? [])];
+    const [item] = arr.splice(from, 1);
+    arr.splice(to, 0, item);
+    updateReel(reel.id, { ...reel, roadmap: { ...reel.roadmap, steps: arr } });
+  }
 
   function saveStop(updated: Stop) {
     if (!reel) return;
@@ -293,10 +314,32 @@ export function InlinePlanEditor({
         {reel.roadmap.stops.map((s, i) => (
           <div key={s.id}>
             <div
-              className="flex gap-2 items-center group cursor-pointer rounded-xl px-2 py-1.5 hover:bg-moss-50/60 transition-colors"
+              draggable
+              onDragStart={(e) => {
+                if (!canDragRef.current) { e.preventDefault(); return; }
+                setStopDragIdx(i);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(e) => { e.preventDefault(); setStopOverIdx(i); }}
+              onDragLeave={() => setStopOverIdx(null)}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (stopDragIdx !== null) reorderStops(stopDragIdx, i);
+                setStopDragIdx(null); setStopOverIdx(null); canDragRef.current = false;
+              }}
+              onDragEnd={() => { setStopDragIdx(null); setStopOverIdx(null); canDragRef.current = false; }}
               onClick={() => setEditingStopId(editingStopId === s.id ? null : s.id)}
+              className={[
+                "flex gap-2 items-center group cursor-pointer rounded-xl px-2 py-1.5 hover:bg-moss-50/60 transition-colors border-t-2",
+                stopDragIdx === i ? "opacity-40" : "",
+                stopOverIdx === i && stopDragIdx !== i ? "border-moss-500" : "border-transparent",
+              ].join(" ")}
             >
-              <span className="w-5 h-5 rounded-full bg-moss-500 text-white text-[10px] font-semibold flex items-center justify-center shrink-0">
+              <span
+                className="w-5 h-5 rounded-full bg-moss-500 text-white text-[10px] font-semibold flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing select-none"
+                onPointerDown={() => { canDragRef.current = true; }}
+                onPointerUp={() => { canDragRef.current = false; }}
+              >
                 {i + 1}
               </span>
               <div className="flex-1 min-w-0">
@@ -334,10 +377,32 @@ export function InlinePlanEditor({
         {reel.roadmap.steps.map((s, i) => (
           <div key={s.id}>
             <div
-              className="flex gap-2 items-center group cursor-pointer rounded-xl px-2 py-1.5 hover:bg-clay-50/60 transition-colors"
+              draggable
+              onDragStart={(e) => {
+                if (!canDragRef.current) { e.preventDefault(); return; }
+                setStepDragIdx(i);
+                e.dataTransfer.effectAllowed = "move";
+              }}
+              onDragOver={(e) => { e.preventDefault(); setStepOverIdx(i); }}
+              onDragLeave={() => setStepOverIdx(null)}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (stepDragIdx !== null) reorderSteps(stepDragIdx, i);
+                setStepDragIdx(null); setStepOverIdx(null); canDragRef.current = false;
+              }}
+              onDragEnd={() => { setStepDragIdx(null); setStepOverIdx(null); canDragRef.current = false; }}
               onClick={() => setEditingStepId(editingStepId === s.id ? null : s.id)}
+              className={[
+                "flex gap-2 items-center group cursor-pointer rounded-xl px-2 py-1.5 hover:bg-clay-50/60 transition-colors border-t-2",
+                stepDragIdx === i ? "opacity-40" : "",
+                stepOverIdx === i && stepDragIdx !== i ? "border-clay-500" : "border-transparent",
+              ].join(" ")}
             >
-              <span className="w-5 h-5 rounded-full bg-clay-500 text-white text-[10px] font-semibold flex items-center justify-center shrink-0">
+              <span
+                className="w-5 h-5 rounded-full bg-clay-500 text-white text-[10px] font-semibold flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing select-none"
+                onPointerDown={() => { canDragRef.current = true; }}
+                onPointerUp={() => { canDragRef.current = false; }}
+              >
                 {i + 1}
               </span>
               <div className="flex-1 min-w-0">
