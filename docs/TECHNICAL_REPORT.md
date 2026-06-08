@@ -6,9 +6,9 @@
 
 ## 1. Product Vision and Evolution
 
-**Original W2 vision:** Roots was designed for people who doom-save social media content — hoarding reels and TikToks with no plan to act on them. The vision: paste a social video URL and the app transforms it into an actionable plan, either a real-world multi-stop route with a map and travel legs, or a step-by-step project roadmap with materials. The tagline from our W2 statement captures it: *"proactively extracts hidden metadata, logistics, and instructional steps from video content to move the user to action sooner and more often."*
+**Original W2 vision:** Roots was designed for people who doom-save social media content, hoarding reels and TikToks with no plan to act on them. The vision: paste a social video URL, and the app transforms it into an actionable plan, either a real-world multi-stop route with a map and travel legs, or a step-by-step project roadmap with materials. The tagline from our W2 statement captures it: *"proactively extracts hidden metadata, logistics, and instructional steps from video content to move the user to action sooner and more often."*
 
-**Current vision:** That core promise held. The product now does exactly what W2 described — paste a reel, get a structured plan — and has added calendar scheduling, live geocoding with weather, stop/step editing, and drag-and-drop reordering. The primary user from W2 (someone who saves content but never acts on it) remains the target. What changed is scope: the original vision included a group planning mode (Gerardbot group chat, voting) that was prototyped in `roland_prototype/` but not wired into the main `Roots/` app. That feature shifted to backlog (issues [#9](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app/issues/9) and [#23](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app/issues/23)).
+**Current vision:** That core promise held. The product now does exactly what W2 described, paste a reel and get a structured plan, and has added calendar scheduling, live geocoding with weather, stop/step editing, and drag-and-drop reordering. The primary user from W2 (someone who saves content but never acts on it) remains the target. What changed is scope: the original vision included a group planning mode (Gerardbot group chat, voting) that was prototyped in `roland_prototype/` but not wired into the main `Roots/` app. That feature shifted to backlog (issues [#9](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app/issues/9) and [#23](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app/issues/23)).
 
 **Four decisions that bent the vision:**
 
@@ -17,7 +17,7 @@
 3. **Group features → backlog.** Demo dry-run feedback showed the schedule+calendar flow alone was dense enough for a demo. Group planning was implemented in `roland_prototype/` but intentionally excluded from the main app's home page to reduce scope risk.
 4. **Geocoding robustness.** The first pass relied on Nominatim for location resolution. When hike-style content (non-address place names) failed to geocode, we added an Overpass API name-based fallback (commit [`f5cfca7`](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app/commit/f5cfca730fd54ce6772ad784093ee0b48e4b339b)).
 
-**User served:** The W2 primary persona — a 20-something who has dozens of saved reels and zero executed plans — still describes the user. The product still solves their problem. The "group trip planner" persona from W3 storyboards is partially served by the calendar view but not yet by a multi-user room; that remains future work.
+**User served:** The W2 primary persona, a 20-something who has dozens of saved reels and zero executed plans, still describes the user. The product still solves their problem. The "group trip planner" persona from W3 storyboards is partially served by the calendar view but not yet by a multi-user room; that remains future work.
 
 ---
 
@@ -99,9 +99,9 @@
 
 **Planned (W5):** Unit tests for the extract pipeline (JSON parse correctness, geocoding response handling) and component-level smoke tests. Jest + ts-jest was the agreed toolchain. We scoped out end-to-end tests as out-of-budget given the sprint timeline.
 
-**Implemented:** Jest + ts-jest runs via `npm test` in `Roots/`. The CI workflow executes tests on every push and pull request. One representative test is the extract pipeline's JSON parsing and validation logic in `Roots/__tests__/` — it verifies that a valid Claude response produces the correct `Roadmap` type shape and that malformed JSON is caught and surfaced as a user-facing error rather than a silent crash. The CI setup required skipping one deferred auth test that requires a live Supabase connection (annotated with `@skip-no-env`) — a human judgment call the AI-generated test scaffold did not make on its own.
+**Implemented:** Jest + ts-jest runs via `npm test` in `Roots/`. The CI workflow executes tests on every push and pull request. One representative test is the extract pipeline's JSON parsing and validation logic in `Roots/__tests__/` — it verifies that a valid Claude response produces the correct `Roadmap` type shape and that malformed JSON is caught and surfaced as a user-facing error rather than a silent crash. The CI setup required skipping one deferred auth test that requires a live Supabase connection (annotated with `@skip-no-env`), a human judgment call the AI-generated test scaffold did not make on its own.
 
-**AI vs. human split:** Cursor generated the initial test stubs from the `lib/types.ts` type definitions — a 5-minute task that would have taken 30 minutes by hand. Human judgment was required to identify which paths were worth testing (the parse/validate cycle is the one most likely to fail in production) versus which to skip (geocoding, which requires live network). The deferred-auth skip annotation was written by hand after the AI scaffold caused CI to hang waiting for env vars.
+**AI vs. human split:** Cursor generated the initial test stubs from the `lib/types.ts` type definitions, a 5-minute task that would have taken 30 minutes by hand. Human judgment was required to identify which paths were worth testing (the parse/validate cycle is the one most likely to fail in production) versus which to skip (geocoding, which requires live network). The deferred-auth skip annotation was written by hand after the AI scaffold caused CI to hang waiting for env vars.
 
 CI workflow file: [`.github/workflows/ci.yml`](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app/blob/main/.github/workflows/ci.yml)
 
@@ -111,7 +111,7 @@ CI workflow file: [`.github/workflows/ci.yml`](https://github.com/CSEN-SCU/csen-
 
 | Finding | Severity | Fix shipped |
 |---|---|---|
-| TECH 1/API 1: No URL input validation — any text accepted, free API access | High | Added URL format validation before the extract call fires; arbitrary text now returns a 400 before hitting Claude. Commit [`a893783`](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app/commit/a893783469fbbd961fe3da1829453f0878eb06a3) |
+| TECH 1/API 1: No URL input validation, any text accepted, free API access | High | Added URL format validation before the extract call fires; arbitrary text now returns a 400 before hitting Claude. Commit [`a893783`](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app/commit/a893783469fbbd961fe3da1829453f0878eb06a3) |
 | TECH 2: No authentication | Medium | Replaced localStorage with Supabase auth (commit `c77afd5`) |
 | TECH 3: Raw model text in parse-failure logs | Medium | Parse-failure path now logs request ID + error type only, no model output slice. Documented in [`docs/sprint-2-remediations.md`](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app/blob/main/docs/sprint-2-remediations.md) |
 | API 2: Long-form YouTube URLs accepted | Low | Added platform detection to reject non-short YouTube URLs before Claude is called (`app/api/extract/route.ts`) |
@@ -133,7 +133,7 @@ API key management: no key was found in the repo at any point in git history (co
 
 ### Successes
 
-**1. The extract pipeline shipped fast and worked.** We had a functioning `POST /api/extract` end-to-end within Sprint 1 — real URL in, structured plan out. This happened because we spent W3 and W4 nailing the `lib/types.ts` type schema before writing a line of AI prompt logic. Having `Roadmap`, `Stop`, and `Step` typed first meant the Claude prompt had a concrete JSON target, and the first live run produced parseable output on the first try. We would keep the "types before prompt" practice.
+**1. The extract pipeline shipped fast and worked.** We had a functioning `POST /api/extract` end-to-end within Sprint 1, real URL in, structured plan out. This happened because we spent W3 and W4 nailing the `lib/types.ts` type schema before writing a line of AI prompt logic. Having `Roadmap`, `Stop`, and `Step` typed first meant the Claude prompt had a concrete JSON target, and the first live run produced parseable output on the first try. We would keep the "types before prompt" practice.
 
 **2. The Supabase migration went cleanly.** Replacing localStorage with Supabase mid-sprint (Sprint 2) in a running app is the kind of change that tends to cascade. It didn't, because the state access was already abstracted through `lib/store.tsx`. The migration touched one file plus the new Supabase client init, and CI stayed green (commits `c77afd5` → `93004a7`). We would keep the store-abstraction pattern.
 
@@ -141,11 +141,11 @@ API key management: no key was found in the repo at any point in git history (co
 
 ### Setbacks
 
-**1. Geocoding was underestimated throughout.** Every sprint had at least one geocoding-related commit. Nominatim works well for addresses but poorly for named trails, neighborhoods, or landmarks described in video captions. We added the Overpass fallback late (Sprint 3, commit `f5cfca7`), but it should have been in the design from Sprint 1. The early signal we missed was in W4 testing: several sample reels failed to geocode any stops. We noted it as a known issue rather than a blocking one — that was wrong. Future teams: geocoding edge cases compound; treat them as a priority, not a polish item.
+**1. Geocoding was underestimated throughout.** Every sprint had at least one geocoding-related commit. Nominatim works well for addresses but poorly for named trails, neighborhoods, or landmarks described in video captions. We added the Overpass fallback late (Sprint 3, commit `f5cfca7`), but it should have been in the design from Sprint 1. The early signal we missed was in W4 testing: several sample reels failed to geocode any stops. We noted it as a known issue rather than a blocking one, which was wrong. Future teams: geocoding edge cases compound; treat them as a priority, not a polish item.
 
 **2. The group feature never made it out of the prototype directory.** `roland_prototype/` has a working Gerardbot group chat and voting UI. It never merged into `Roots/`. The early signal was that we had two parallel directories with no convergence plan after Sprint 1. The sprint board showed the group cards sitting in "In Progress" for two sprints without moving to "Done." We would fix this by enforcing a merge-or-kill decision at the Sprint 2 retrospective rather than letting the split persist.
 
-**3. The security remediations came late.** Three of the five red-team findings (URL validation, long-form YouTube detection, log sanitization) were straightforward and should have been baseline behavior from Sprint 1. We didn't think adversarially about the input field until an external team did. One commit — `a893783` (rate limiting and URL validation) — fixed what amounted to free API access for anyone who typed text instead of a URL. The early signal: the W5 testing plan focused entirely on happy-path extraction and never included adversarial inputs. We would add a security column to sprint planning, not just to W7.
+**3. The security remediations came late.** Three of the five red-team findings (URL validation, long-form YouTube detection, log sanitization) were straightforward and should have been baseline behavior from Sprint 1. We didn't think adversarially about the input field until an external team did. One commit, `a893783` (rate limiting and URL validation), fixed what amounted to free API access for anyone who typed text instead of a URL. The early signal: the W5 testing plan focused entirely on happy-path extraction and never included adversarial inputs. We would add a security column to sprint planning, not just to W7.
 
 ### AI tools across the quarter
 
