@@ -87,7 +87,7 @@
 **Seams:** The real-world social video extraction pipeline depends on publicly available oEmbed metadata and caption text; videos with no captions or platform-blocked oEmbed (TikTok in particular) fall back to URL-only extraction, which degrades plan quality. The demo video and URL parsing handle these gracefully by returning generic structure, but stop accuracy varies.
 
 **Links:**
-- Live URL: [https://csen-174-s26-team-project-roots-app.vercel.app](https://csen-174-s26-team-project-roots-app.vercel.app)
+- Live URL: [https://roots-app-s26.vercel.app](https://roots-app-s26.vercel.app)
 - Demo video: [https://youtu.be/ZjOUPIpExWU](https://youtu.be/ZjOUPIpExWU)
 - Repo: [https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app](https://github.com/CSEN-SCU/csen-174-s26-team-project-roots-app)
 
